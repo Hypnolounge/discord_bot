@@ -1,0 +1,39 @@
+services:
+  db:
+    container_name: hypnolounge_db
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ZYxJnC3{,dgR!?}+
+    volumes:
+      - /portainer/Files/AppData/Data/hypnolounge/db:/var/lib/mysql
+    networks:
+      default:
+        ipv4_address: 172.19.0.3
+  server:
+    container_name: hypnolounge_bot
+    image: hypnolounge-bot:latest
+    restart: unless-stopped
+    environment:
+      - DB_IP=172.19.0.3
+      - DB_PW=ZYxJnC3{,dgR!?}+
+    depends_on:
+     - db
+    volumes:
+      - /root/hypnolounge_bot/last_message.json:/last_message.json
+  adminer:
+    container_name: hypnolounge_adminer
+    image: adminer
+    restart: always
+    ports:
+      - 6546:8080
+    environment:
+      ADMINER_DESIGN: pepa-linha-dark
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
