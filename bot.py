@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands as cmd
 from discord.ext import tasks
-from discord.interactions import Interaction
 from dc import Intro, User, Session, Strike, Compliment, Ticket
 import db as db
-import pprint
 import time
 import json
 import os
@@ -19,7 +17,7 @@ args = sys.argv
 test = string_to_bool[args[1]]
 dotenv.load_dotenv()
 token = str(os.getenv("TOKEN"))
-
+test = os.getenv("TEST") | 0
 
 # guilds
 hypnolounge_guild_id = 1125008815272759408
@@ -302,85 +300,102 @@ async def on_member_join(member):
     await member.add_roles(*autoroles, reason="Autorole")
 
 
-@bot.event
-async def on_message(message: discord.Message):
-    if not message.author.bot:
-        # INTRO ROLE
-        if message.channel.id == intro_channel_id:
-            if len(message.content) >= 300:
-                role = message.guild.get_role(member_role)
-                await message.author.add_roles(role)
-                if db.get_user_by_id(User(userID=message.author.id)) is None:
-                    createUser(message.author)
-                db.add_intro(Intro(message.author.id, message.id, message.content))
-            else:
-                await message.delete()
-                await message.author.send(
-                    content="Your intro is too short, say more.😥 You can post another intro in 6 hours."
-                )
+async def check_message(message: discord.Message):
+    if message.author.bot:
+        return
+    
+    if message.is_system():
+        return
+    
+    # AUTO DELETES
+    if message.channel.id in autodelete_channels:
+        if message.author.get_role(mod_role):
+            return
+        
+        has_content = bool(message.attachments)
+        has_link = any(
+            link in message.content for link in ["http://", "https://"]
+        )
+        if has_link or has_content:
+            return
+        
+        await message.delete()
 
-        # NOW PING
-        try:
-            if message.channel.id == lf_tist_channel_id:
-                msg = "{} {}".format(
-                    now_primary_to_role["hypnotist"].mention,
-                    now_primary_to_role["switch"].mention,
-                )
-                ping = await message.channel.send(msg)
-                await ping.delete()
-            if message.channel.id == lf_sub_channel_id:
-                msg = "{} {}".format(
-                    now_primary_to_role["subject"].mention,
-                    now_primary_to_role["switch"].mention,
-                )
-                ping = await message.channel.send(msg)
-                await ping.delete()
-        except AttributeError as e:
-            for k, v in now_primary_to_role.items():
-                now_primary_to_role[k] = message.guild.get_role(v)
+        if message.type == discord.MessageType.thread_created:
+            return
+        
+        await message.author.send(
+            "Your post in {} was deleted because it did not contain a media file.".format(
+                message.channel.mention
+            )
+        )
 
-        # BOOST ANNOUNCE
-        if message.type == discord.MessageType.premium_guild_subscription:
-            announce = bot.get_channel(announce_channel_id)
-            await announce.send(
-                "Thank you {} for boosting the Hypnolounge! I love you ❤️".format(
-                    message.author.mention
-                )
+
+    if message.type == discord.MessageType.thread_created:
+        return
+    
+    # INTRO ROLE
+    if message.channel.id == intro_channel_id:
+        if len(message.content) >= 300:
+            role = message.guild.get_role(member_role)
+            await message.author.add_roles(role)
+            if db.get_user_by_id(User(userID=message.author.id)) is None:
+                createUser(message.author)
+            db.add_intro(Intro(message.author.id, message.id, message.content))
+        else:
+            await message.delete()
+            await message.author.send(
+                content="Your intro is too short, say more.😥 You can post another intro in 6 hours."
             )
 
-        # ANNOUNCEMENT
-        if message.channel.id == announce_channel_id:
-            role = addtional_emoji_to_role["📢"]
-            text = message.content + "\n" + role.mention
-            msg = await message.channel.send(text)
-            await msg.delete()
+    # NOW PING
+    try:
+        if message.channel.id == lf_tist_channel_id:
+            msg = "{} {}".format(
+                now_primary_to_role["hypnotist"].mention,
+                now_primary_to_role["switch"].mention,
+            )
+            ping = await message.channel.send(msg)
+            await ping.delete()
+        if message.channel.id == lf_sub_channel_id:
+            msg = "{} {}".format(
+                now_primary_to_role["subject"].mention,
+                now_primary_to_role["switch"].mention,
+            )
+            ping = await message.channel.send(msg)
+            await ping.delete()
+    except AttributeError as e:
+        for k, v in now_primary_to_role.items():
+            now_primary_to_role[k] = message.guild.get_role(v)
 
-        # HOC
-        if message.channel.id == hypno_oc_channel_id:
-            role = addtional_emoji_to_role["🌀"]
-            text = "New post in hypno-original-content " + role.mention
-            msg = await message.channel.send(text)
-            await msg.delete()
+    # BOOST ANNOUNCE
+    if message.type == discord.MessageType.premium_guild_subscription:
+        announce = bot.get_channel(announce_channel_id)
+        await announce.send(
+            "Thank you {} for boosting the Hypnolounge! I love you ❤️".format(
+                message.author.mention
+            )
+        )
 
-        # AUTO DELETES
-        if message.channel.id in autodelete_channels and not isinstance(
-            message.channel, discord.Thread
-        ):
-            if message.author.get_role(mod_role) is None:
-                has_content = bool(message.attachments)
-                has_link = any(
-                    link in message.content for link in ["http://", "https://"]
-                )
-                if not has_link and not has_content:
-                    await message.delete()
-                    await message.author.send(
-                        "Your post in {} was deleted because it did not contain a media file.".format(
-                            message.channel.mention
-                        )
-                    )
+    # ANNOUNCEMENT
+    if message.channel.id == announce_channel_id:
+        role = addtional_emoji_to_role["📢"]
+        text = message.content + "\n" + role.mention
+        msg = await message.channel.send(text)
+        await msg.delete()
 
+    # HOC
+    if message.channel.id == hypno_oc_channel_id:
+        role = addtional_emoji_to_role["🌀"]
+        text = "New post in hypno-original-content " + role.mention
+        msg = await message.channel.send(text)
+        await msg.delete()
+
+@bot.event
+async def on_message(message: discord.Message):
+    
+    await check_message(message)
     await bot.process_commands(message)
-
 
 @bot.event
 async def on_raw_message_edit(msg):
