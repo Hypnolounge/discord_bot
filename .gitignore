@@ -3,3 +3,5 @@ logs/*
 *.json
 .env
 __pycache__
+docker*
+.dockerignore
