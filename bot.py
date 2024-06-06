@@ -12,12 +12,12 @@ import dotenv
 import re
 
 
-string_to_bool = {"yes": True, "no": False}
+""" string_to_bool = {"yes": True, "no": False}
 args = sys.argv
-test = string_to_bool[args[1]]
+test = string_to_bool[args[1]] """
 dotenv.load_dotenv()
 token = str(os.getenv("TOKEN"))
-test = os.getenv("TEST") | 0
+test = os.getenv("TEST", 0)
 
 # guilds
 hypnolounge_guild_id = 1125008815272759408
@@ -28,7 +28,7 @@ member_role = 1125484694134341744
 locktober_role = 1155774064267366460
 
 # channels
-test_channel_id = 1138415541141373039
+test_channel_id = 1248249254569443399
 survey_channel_id = 1136035878414864494
 rules_channel_id = 1125011563670163497
 stats_channel_id = 1136947478801944637
@@ -64,7 +64,7 @@ autodelete_channels = [
     1125095139212263516,  # nsfw selfies
     1125087513615290409,  # sfw selfies
     1155774907695759370,  # locktober nsfw selfies
-    1201173532613292092   # pet photos
+    1201173532613292092,  # pet photos
 ]
 
 if test:
@@ -83,7 +83,7 @@ if test:
     lf_sub_channel_id = test_channel_id
 
     intro_channel_id = 0
-    # mod_role = 0
+    mod_role = 0
 
 # files/data
 last_message_file = "last_message.json"
@@ -104,7 +104,7 @@ autorole_ids = [
     1125838804671004922,
 ]
 autoroles = []
-invite_link = "https://discord.gg/hypnolounge"
+invite_link = "https://discord.gg/Caz6NHR2Zu"
 intro_jump_url = ""
 
 # bot
@@ -264,7 +264,7 @@ async def on_ready():
         update_stats.start()
         time.sleep(5)
 
-    #update_locktober.start()
+    # update_locktober.start()
     check_cursor.start()
 
 
@@ -300,40 +300,32 @@ async def on_member_join(member):
     await member.add_roles(*autoroles, reason="Autorole")
 
 
-async def check_message(message: discord.Message):
+async def auto_delete(message: discord.Message):
     if message.author.bot:
-        return
-    
-    if message.is_system():
-        return
-    
+        return False
+
     # AUTO DELETES
     if message.channel.id in autodelete_channels:
         if message.author.get_role(mod_role):
-            return
-        
+            return False
+
         has_content = bool(message.attachments)
-        has_link = any(
-            link in message.content for link in ["http://", "https://"]
-        )
+        has_link = any(link in message.content for link in ["http://", "https://"])
         if has_link or has_content:
-            return
-        
+            return False
+
         await message.delete()
 
-        if message.type == discord.MessageType.thread_created:
-            return
-        
+        if message.is_system():
+            return True
+
         await message.author.send(
             "Your post in {} was deleted because it did not contain a media file.".format(
                 message.channel.mention
             )
         )
+        return True
 
-
-    if message.type == discord.MessageType.thread_created:
-        return
-    
     # INTRO ROLE
     if message.channel.id == intro_channel_id:
         if len(message.content) >= 300:
@@ -342,11 +334,21 @@ async def check_message(message: discord.Message):
             if db.get_user_by_id(User(userID=message.author.id)) is None:
                 createUser(message.author)
             db.add_intro(Intro(message.author.id, message.id, message.content))
+            return True
         else:
             await message.delete()
             await message.author.send(
                 content="Your intro is too short, say more.😥 You can post another intro in 6 hours."
             )
+            return True
+
+
+async def announcements(message: discord.Message):
+    if message.author.bot:
+        return
+
+    if message.is_system():
+        return
 
     # NOW PING
     try:
@@ -391,11 +393,15 @@ async def check_message(message: discord.Message):
         msg = await message.channel.send(text)
         await msg.delete()
 
+
 @bot.event
 async def on_message(message: discord.Message):
-    
-    await check_message(message)
+
+    deleted = await auto_delete(message)
+    if not deleted:
+        await announcements(message)
     await bot.process_commands(message)
+
 
 @bot.event
 async def on_raw_message_edit(msg):
@@ -457,7 +463,6 @@ async def on_raw_reaction_remove(reaction: discord.RawReactionActionEvent):
             role = addtional_emoji_to_role.get(str(reaction.emoji))
             if role:
                 await user.remove_roles(role)
-
 
 
 @tasks.loop(minutes=1)
@@ -760,7 +765,6 @@ async def check_roles_messages():
     else:
         rebuild = True
 
-
     # notification
     notification_message_id = read_message_id("notification_roles_messages")
     addtional_embed = discord.Embed(
@@ -846,7 +850,7 @@ async def check_roles_messages():
         for k, v in kinks_emoji_to_name.items():
             time.sleep(0.5)
             await kink_message.add_reaction(discord.PartialEmoji.from_str(k))
-        
+
         # notification
         addtional_message = await role_channel.send(embed=addtional_embed)
         write_message_id("notification_roles_messages", addtional_message.id)
@@ -946,7 +950,7 @@ async def check_tickets():
     tickets = db.get_open_tickets()
     descriptions = {
         "application": "",
-        "invite":  "Give us a few information on who you'd like to invite here. We will try to make their application as easy as we can.",
+        "invite": "Give us a few information on who you'd like to invite here. We will try to make their application as easy as we can.",
         "issue": "After filling up the form, you may add any information you've forgotten and attach any proof you have in this chat. The mods will contact everyone you have named and ask them for their side of the story.",
         "misc": "",
     }
@@ -1363,6 +1367,7 @@ class DefaultCloseModal(discord.ui.Modal, title="Close Ticket"):
         await interaction.followup.send("Closing....")
         await delete_ticket_channel(ticket)
 
+
 # stats
 
 
@@ -1402,7 +1407,7 @@ def build_stats_embeds():
         "switch": discord.Colour.gold(),
         "subject": discord.Colour.green(),
         "undecided": discord.Colour.dark_gray(),
-        #"locktober": discord.Colour.magenta(),
+        # "locktober": discord.Colour.magenta(),
     }
     continent_roles = [
         "Africa",
