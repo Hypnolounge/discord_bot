@@ -98,12 +98,6 @@ if test:
 
 # other
 
-autorole_ids = [
-    1125839143981830144,
-    1125841287363436594,
-    1125838804671004922,
-]
-autoroles = []
 invite_link = "https://discord.gg/Caz6NHR2Zu"
 intro_jump_url = ""
 
@@ -214,11 +208,6 @@ async def on_ready():
     if intro:
         intro_jump_url = intro.jump_url
 
-    for role_id in autorole_ids:
-        role = guild.get_role(role_id)
-        autoroles.append(role)
-        time.sleep(0.2)
-
     for k, v in type_emoji_to_role.items():
         role = guild.get_role(v)
         type_emoji_to_role[k] = role
@@ -295,11 +284,6 @@ async def say(ctx, *, message):
 # EVENTS
 
 
-@bot.event
-async def on_member_join(member):
-    await member.add_roles(*autoroles, reason="Autorole")
-
-
 async def auto_delete(message: discord.Message):
     if message.author.bot:
         return False
@@ -347,6 +331,15 @@ async def announcements(message: discord.Message):
     if message.author.bot:
         return
 
+    # BOOST ANNOUNCE
+    if message.type == discord.MessageType.premium_guild_subscription:
+        announce = bot.get_channel(announce_channel_id)
+        await announce.send(
+            "Thank you {} for boosting the Hypnolounge! I love you ❤️".format(
+                message.author.mention
+            )
+        )
+
     if message.is_system():
         return
 
@@ -369,15 +362,6 @@ async def announcements(message: discord.Message):
     except AttributeError as e:
         for k, v in now_primary_to_role.items():
             now_primary_to_role[k] = message.guild.get_role(v)
-
-    # BOOST ANNOUNCE
-    if message.type == discord.MessageType.premium_guild_subscription:
-        announce = bot.get_channel(announce_channel_id)
-        await announce.send(
-            "Thank you {} for boosting the Hypnolounge! I love you ❤️".format(
-                message.author.mention
-            )
-        )
 
     # ANNOUNCEMENT
     if message.channel.id == announce_channel_id:
@@ -1091,12 +1075,13 @@ async def create_ticket_channel(
     await channel.send(embed=embed, view=view)
     if type == "application":
         msgs = [
-            "Welcome to the Hypnolounge! Before anything, __read all of the__ <#1125011563670163497>. We know you've probably missed something because most applicants do. __Please answer the questions at the bottom of this channel, and show us some proof of your age.__",
+            "Welcome to the Hypnolounge! We're sure you're excited to enter and do all the horny things you'd like to do, but before anything, please answer these questions.",
             "1. How did you find the Hypnolounge?",
-            "2. Why you want to join the Hypnolounge?",
-            "3. What got you into hypnosis and why you're into hypnosis?",
-            "4. Any hobbies you may have.",
-            "5. Any more information about yourself you'd like to include to convince us you're going to be a great fit for the server.",
+            "2. What got you into hypnosis and why you're into hypnosis?",
+            "3. Could you share a particular experience you've had with hypnosis, if you have any?",
+            "4. Do you have any hobbies or kinks besides hypnosis?",
+            "5. What's the password? If you don't know the password, go back to <#1125011563670163497> and look for it there. We can't tell you where it is because we actually want you to read the rules.",
+            "6. Please send us some proof of your age. Read the <#1125011563670163497> for what kind we will accept."
         ]
         for msg in msgs:
             await channel.send(msg)
