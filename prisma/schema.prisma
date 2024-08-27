@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model compliments {
+  id      Int    @id @default(autoincrement())
+  give    BigInt
+  receive BigInt
+  comment String @db.Text
+
+  @@index([give], map: "give-userid")
+  @@index([receive], map: "receive-userid")
+}
+
+model intros {
+  userID  BigInt @id
+  message BigInt
+  text    String @db.Text
+}
+
+model sessions {
+  id     Int    @id @default(autoincrement())
+  userID BigInt
+  medium String @db.VarChar(15)
+  date   Float?
+
+  @@index([userID], map: "session-userID")
+}
+
+model strikes {
+  id       Int    @id @default(autoincrement())
+  userID   BigInt
+  reason   String @db.Text
+  severity Int
+
+  @@index([userID], map: "strikes-userID")
+}
+
+model tickets {
+  id      Int    @id @default(autoincrement())
+  userID  BigInt
+  channel BigInt
+  type    String @db.VarChar(20)
+  opened  Float
+  closed  Float
+  reason  String @db.VarChar(20)
+}
+
+model users {
+  userID      BigInt @id
+  name        String @db.VarChar(35)
+  displayname String @db.VarChar(35)
+  primary     String @db.VarChar(80)
+  continent   String @db.VarChar(80)
+}
