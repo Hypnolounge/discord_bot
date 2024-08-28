@@ -8,6 +8,8 @@ config = {
     "user": "root",
     "password": os.getenv("DB_PW"),
     "database": "hypnolounge",
+    'charset': 'utf8mb4',
+    'collation': 'utf8mb4_general_ci'
 }
 db = connector.connect(**config)
 cur = db.cursor(buffered=True)
