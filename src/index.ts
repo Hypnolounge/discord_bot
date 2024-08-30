@@ -26,5 +26,6 @@ bot.on("ready", () => {
 
 export default bot;
 
+
 // Log in to Discord using the bot token from the .env file
 bot.login(process.env.BOT_TOKEN);
