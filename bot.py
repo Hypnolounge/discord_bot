@@ -1081,7 +1081,7 @@ async def create_ticket_channel(
             "3. Could you share a particular experience you've had with hypnosis, if you have any?",
             "4. Do you have any hobbies or kinks besides hypnosis?",
             "5. What's the password? If you don't know the password, go back to <#1125011563670163497> and look for it there. We can't tell you where it is because we actually want you to read the rules.",
-            "6. Please send us some proof of your age. Read the <#1125011563670163497> for what kind we will accept."
+            "6. Please send us some proof of your age. Read the <#1232397100310986752> for what kind we will accept."
         ]
         for msg in msgs:
             await channel.send(msg)
