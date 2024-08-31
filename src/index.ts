@@ -1,5 +1,8 @@
-import { Client } from "discord.js";
+import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
+import SelfRoles from "./self_roles";
+import AutoDeletes from "./autodeletes";
+import getGuild from "./utils/getGuild";
 
 // Load environment variables from .env file
 dotenv();
@@ -22,10 +25,19 @@ const bot = new Client({
 // Event triggered when the bot is ready
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user?.tag}!`);
+
+  // Set the bot's activity
+  bot.user?.setActivity({
+    name: "with minds since 2023!",
+    type: ActivityType.Playing,
+  });
+
+  SelfRoles(bot);
+  AutoDeletes(bot);
 });
 
-export default bot;
 
+export default bot;
 
 // Log in to Discord using the bot token from the .env file
 bot.login(process.env.BOT_TOKEN);

@@ -1,30 +1,35 @@
-import { Client, Message, TextChannel } from "discord.js";
+import { Client, Message, TextBasedChannel } from "discord.js";
 import formatString from "../utils/formatString";
 
 export default class AutoDelete {
   client: Client;
-  channel: TextChannel;
+  channel: TextBasedChannel;
   deleteMessage: string;
   contentOnly: boolean;
   characterMinimum: number;
+  excludedRoles: string[];
 
   constructor(
     client: Client,
-    channel: TextChannel,
+    channel: TextBasedChannel,
     deleteMessage: string,
     contentOnly = false,
-    characterMinimum = 0
+    characterMinimum = 0,
+    excludedRoles = []
   ) {
     this.client = client;
     this.channel = channel;
     this.deleteMessage = deleteMessage;
     this.contentOnly = contentOnly;
     this.characterMinimum = characterMinimum;
+    this.excludedRoles = excludedRoles
   }
 
-  public register() {
+  public init() {
     this.client.on("messageCreate", (message) => {
       if (message.channel.id !== this.channel.id) return;
+      if (message.author.bot) return;
+      if (this.excludedRoles.some((role) => message.member?.roles.cache.has(role))) return;
 
       const passContentCheck = this.contentCheck(message);
       if (!passContentCheck) {
