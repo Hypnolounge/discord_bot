@@ -165,10 +165,15 @@ class SelfRoleSelector {
 
   public async createNewMessage() {
     const newMessage = this.generateMessage();
-    const message = await this.channel.send(newMessage);
-    this.messageID = message.id;
-    setKeyValue(this.name, this.messageID);
-    return message;
+    try {
+      const message = await this.channel.send(newMessage);
+      this.messageID = message.id;
+      setKeyValue(this.name, this.messageID);
+      return message;
+    } catch (error) {
+      log_error("Message not sent in SelfRoleSelector");
+      return false;
+    }
   }
 
   public getRoleByEmoji(emoji: string | null) {
@@ -219,6 +224,7 @@ export class SelfRoleSelectorMulti extends SelfRoleSelector {
 
   public async createNewMessage() {
     const message = await super.createNewMessage();
+    if (!message) return message;
 
     this.roles.forEach((role) => {
       message.react(role.emoji);
