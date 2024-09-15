@@ -1,44 +1,49 @@
-import { Client } from "discord.js";
-import {
-  SelfRole,
-  SelfRoleCorrelation,
-  SelfRoleSelectorMulti,
-  SelfRoleSelectorSingle,
-} from "./class/selfrole";
+import { Client, TextBasedChannel } from "discord.js";
 import getChannel from "./utils/getChannel";
 import { log_error } from "./utils/error";
-import { getKeyValue } from "./DB/keyValueStore";
+import config from "./DB/config";
+import { SelfRole, SelfRoleCorrelation } from "./class/roles/selfrole";
+import SelfRoleSelectorMulti from "./class/roles/multiSelector";
+import SelfRoleSelectorSingle from "./class/roles/singleSelector";
 
-export default function SelfRoles(client: Client) {
-  PrimaryRoles(client);
-  LookingForSession(client);
-  LookingForNotification(client);
+let channel: TextBasedChannel;
+
+export default async function SelfRoles(client: Client) {
+  const roles = await getChannel(config.channels.roles);
+  if (!roles || !roles.isTextBased()) {
+    log_error("Roles channel not found");
+    return;
+  }
+  channel = roles;
+
+  await PrimaryRoles(client);
+  await LookingForSession(client);
+  await LookingForNotification(client);
+  await SessionTypes(client);
+  await OpenForDMs(client);
+  await ContinentRoles(client);
+  await Notifications(client);
 }
 
 async function PrimaryRoles(client: Client) {
-  const channel = await getChannel("1248249254569443399");
-
-  if (!channel || !channel.isTextBased()) {
-    log_error("Channel not found");
-    return;
-  }
-
-  const hypnotistRole = new SelfRole("1125010023534305321", "hypnotist", "🔴");
-
-  const switchRole = new SelfRole("1125071348394365038", "switch", "🟡");
-
-  const subRole = new SelfRole("1125010083173105674", "subject", "🟢");
-
-  const undecidedRole = new SelfRole("1125071834065404027", "undecided", "⚪");
-
-  const name = "primary_role_selector";
+  const hypnotistRole = new SelfRole(
+    config.roles.primary.hypnotist,
+    "hypnotist",
+    "🔴"
+  );
+  const switchRole = new SelfRole(config.roles.primary.switch, "switch", "🟡");
+  const subRole = new SelfRole(config.roles.primary.subject, "subject", "🟢");
+  const undecidedRole = new SelfRole(
+    config.roles.primary.undecided,
+    "undecided",
+    "⚪"
+  );
 
   const primarySelector = new SelfRoleSelectorSingle(
     client,
-    name,
+    "primary_role_selector",
     "Primary Role",
     [hypnotistRole, switchRole, subRole, undecidedRole],
-    await getKeyValue(name),
     channel,
     "Select your primary role",
     "Choose a primary role here. Without a primary role, you will not have access to the rest of the server."
@@ -48,21 +53,18 @@ async function PrimaryRoles(client: Client) {
 }
 
 async function LookingForSession(client: Client) {
-  const channel = await getChannel("1248249254569443399");
-
-  if (!channel || !channel.isTextBased()) {
-    log_error("Channel not found");
-    return;
-  }
-
-  const open = new SelfRole("1125492372436959363", "open for sessions", "✅");
+  const open = new SelfRole(
+    config.roles.session.open,
+    "open for sessions",
+    "✅"
+  );
   const maybe = new SelfRole(
-    "1143277273743638660",
+    config.roles.session.maybe,
     "may be open for sessions",
     "🤷‍♂️"
   );
   const closed = new SelfRole(
-    "1125492444264403045",
+    config.roles.session.closed,
     "not open for sessions",
     "❌"
   );
@@ -72,7 +74,6 @@ async function LookingForSession(client: Client) {
     "looking_for_selector",
     "Looking For Sessions",
     [open, maybe, closed],
-    "1248250218022178900",
     channel,
     "Choose if open for sessions",
     "Choose if you are open for sessions or not"
@@ -82,33 +83,20 @@ async function LookingForSession(client: Client) {
 }
 
 async function LookingForNotification(client: Client) {
-  const channel = await getChannel("1248249254569443399");
-
-  if (!channel || !channel.isTextBased()) {
-    log_error("Channel not found");
-    return;
-  }
-
   const correlation = {
-    "1125010023534305321": "1156298225523896321", // looking-for-tist
-    "1125071348394365038": "1156298728475476018", // looking-for-switch
-    "1125010083173105674": "1156298677695025172", // looking-for-sub
-    "1125071834065404027": "1156298728475476018", // looking-for-undecided
+    [config.roles.primary.hypnotist]: config.roles.now_announce.hypnotist, // looking-for-tist
+    [config.roles.primary.switch]: config.roles.now_announce.switch, // looking-for-switch
+    [config.roles.primary.subject]: config.roles.now_announce.subject, // looking-for-sub
+    [config.roles.primary.undecided]: config.roles.now_announce.undecided, // looking-for-undecided
   };
 
-  const looking = new SelfRoleCorrelation(
-    "1125010023534305321",
-    "",
-    "⌚",
-    correlation
-  );
+  const looking = new SelfRoleCorrelation("", "⌚", correlation);
 
   const lookingForSelector = new SelfRoleSelectorMulti(
     client,
     "looking_for_notification_selector",
     "looking-for Notifications",
     [looking],
-    "1248250227627135067",
     channel,
     `If you have this role, you will receive notifications every time someone messages in one of the looking-for channels relevant to your primary role:
       hypnotists get notifications from looking-for-tists
@@ -117,4 +105,94 @@ async function LookingForNotification(client: Client) {
   );
 
   await lookingForSelector.init();
+}
+
+async function SessionTypes(client: Client) {
+  const text = new SelfRole(config.roles.session.text, "text", "🗒️");
+  const voice = new SelfRole(config.roles.session.voice, "voice", "☎️");
+  const video = new SelfRole(config.roles.session.video, "video", "🎞️");
+  const inPerson = new SelfRole(
+    config.roles.session.in_person,
+    "in person",
+    "👬"
+  );
+  const covert = new SelfRole(
+    config.roles.session.covert,
+    "covert (People can assume you're ok with covert hypnosis without needing to ask you.)",
+    "🫢"
+  );
+
+  const sessionTypeSelector = new SelfRoleSelectorMulti(
+    client,
+    "session_type_selector",
+    "Session Type",
+    [text, voice, video, inPerson, covert],
+    channel
+  );
+
+  await sessionTypeSelector.init();
+}
+
+async function OpenForDMs(client: Client) {
+  const open = new SelfRole(config.roles.dms.open, "Open for DMs", "✉️");
+  const ask = new SelfRole(config.roles.dms.ask, "Ask for DM", "🚫");
+
+  const dmSelector = new SelfRoleSelectorSingle(
+    client,
+    "dm_selector",
+    "Open for DMs",
+    [open, ask],
+    channel,
+    "Choose if open for DMs",
+    "Choose if your DMs are open or not"
+  );
+
+  await dmSelector.init();
+}
+
+async function ContinentRoles(client: Client) {
+  const roles: SelfRole[] = [];
+
+  for (const continent of config.roles.continent) {
+    const role = new SelfRole(continent.role, continent.desc, "");
+    roles.push(role);
+  }
+
+  const continentSelector = new SelfRoleSelectorSingle(
+    client,
+    "continent_selector",
+    "Continent Role",
+    roles,
+    channel,
+    "Choose a continent",
+    "Select the continent you live in."
+  );
+
+  await continentSelector.init();
+}
+
+async function Notifications(client: Client) {
+  const announcements = new SelfRole(
+    config.roles.announcements,
+    "Announcements",
+    "📢"
+  );
+  const hoc = new SelfRole(config.roles.hoc, "HOC", "🌀");
+  const gaming = new SelfRole(config.roles.gaming, "Gaming", "🎮");
+  const minecraft = new SelfRole(
+    config.roles.minecraft,
+    "Minecraft",
+    "<:creeper:1284881800644132874>"
+  );
+
+  const notificationSelector = new SelfRoleSelectorMulti(
+    client,
+    "notification_selector",
+    "Notification Roles",
+    [announcements, hoc, gaming, minecraft],
+    channel,
+    "If you have these roles, every time someone post in its corresponding channel, you will get a notification."
+  );
+
+  await notificationSelector.init();
 }

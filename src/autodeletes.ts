@@ -2,14 +2,19 @@ import { Client } from "discord.js";
 import getChannel from "./utils/getChannel";
 import { log_error } from "./utils/error";
 import AutoDelete from "./class/autodelete";
+import config from "./DB/config";
 
 export default function AutoDeletes(client: Client) {
-  IntroAutoDelete(client);
-  NSFWAutoDelete(client);
+  //IntroAutoDelete(client);
+  //SFWAutoDelete(client);
+  //NSFWAutoDelete(client);
+  //HOCAutoDelete(client);
+  //HRCAutoDelete(client);
+  //FilesAutoDelete(client);
 }
 
 async function IntroAutoDelete(client: Client) {
-  const channel = await getChannel("1197883681117835335");
+  const channel = await getChannel(config.channels.intros);
 
   if (!channel || !channel.isTextBased()) {
     log_error("Channel not found");
@@ -27,8 +32,26 @@ async function IntroAutoDelete(client: Client) {
   introAutoDelete.init();
 }
 
+async function SFWAutoDelete(client: Client) {
+  const channel = await getChannel(config.channels.sfw_selfies);
+
+  if (!channel || !channel.isTextBased()) {
+    log_error("Channel not found");
+    return;
+  }
+
+  const sfwAutoDelete = new AutoDelete(
+    client,
+    channel,
+    "Your post in {{channelURL}} was deleted because it did not contain a media file.",
+    true
+  );
+
+  sfwAutoDelete.init();
+}
+
 async function NSFWAutoDelete(client: Client) {
-  const channel = await getChannel("1248249254569443399");
+  const channel = await getChannel(config.channels.nsfw_selfies);
 
   if (!channel || !channel.isTextBased()) {
     log_error("Channel not found");
@@ -43,4 +66,58 @@ async function NSFWAutoDelete(client: Client) {
   );
 
   nsfwAutoDelete.init();
+}
+
+async function HOCAutoDelete(client: Client) {
+  const channel = await getChannel(config.channels.hypno_oc);
+
+  if (!channel || !channel.isTextBased()) {
+    log_error("Channel not found");
+    return;
+  }
+
+  const hocAutoDelete = new AutoDelete(
+    client,
+    channel,
+    "Your post in {{channelURL}} was deleted because it did not contain a media file.",
+    true
+  );
+
+  hocAutoDelete.init();
+}
+
+async function HRCAutoDelete(client: Client) {
+  const channel = await getChannel(config.channels.hypno_rc);
+
+  if (!channel || !channel.isTextBased()) {
+    log_error("Channel not found");
+    return;
+  }
+
+  const hrcAutoDelete = new AutoDelete(
+    client,
+    channel,
+    "Your post in {{channelURL}} was deleted because it did not contain a media file.",
+    true
+  );
+
+  hrcAutoDelete.init();
+}
+
+async function FilesAutoDelete(client: Client) {
+  const channel = await getChannel(config.channels.files);
+
+  if (!channel || !channel.isTextBased()) {
+    log_error("Channel not found");
+    return;
+  }
+
+  const filesAutoDelete = new AutoDelete(
+    client,
+    channel,
+    "Your post in {{channelURL}} was deleted because it did not contain a media file.",
+    true
+  );
+
+  filesAutoDelete.init();
 }

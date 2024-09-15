@@ -3,6 +3,7 @@ import { config as dotenv } from "dotenv";
 import SelfRoles from "./self_roles";
 import AutoDeletes from "./autodeletes";
 import getGuild from "./utils/getGuild";
+import Announcements from "./announcements";
 
 // Load environment variables from .env file
 dotenv();
@@ -34,8 +35,8 @@ bot.on("ready", () => {
 
   SelfRoles(bot);
   AutoDeletes(bot);
+  Announcements(bot);
 });
-
 
 export default bot;
 

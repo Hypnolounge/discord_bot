@@ -1,6 +1,10 @@
+import Logger, { LogEntry } from "./Logger";
+
 export function log_error(message: string) {
   const current = getCurrentFormatedTime();
   console.error(current + message);
+  const log = new LogEntry("Error", message, "error");
+  Logger.log(log);
 }
 
 export function log_info(message: string) {

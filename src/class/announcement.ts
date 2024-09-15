@@ -1,37 +1,41 @@
-import { Client, Message, MessageType, Role, TextChannel } from "discord.js";
+import { Client, Message, MessageType, Role, TextBasedChannel, TextChannel } from "discord.js";
 import sleep from "../utils/sleep";
 import formatString from "../utils/formatString";
 
-export default class Announcement {
+export class Announcement {
   client: Client;
-  channel: TextChannel;
+  channel: TextBasedChannel;
   rolePings: Role[];
 
-  constructor(client: Client, channel: TextChannel, rolePings: Role[] = []) {
+  constructor(client: Client, channel: TextBasedChannel, rolePings: Role[] = []) {
     this.client = client;
     this.channel = channel;
     this.rolePings = rolePings;
-    this.init();
   }
 
   async init() {
     this.client.on("messageCreate", async (message) => {
       if (message.channel.id !== this.channel.id) return;
-
-      await this.announce(message);
+      if (message.author.bot) return;
+      await sleep(10000);
+      try{
+        const exists = await this.channel.messages.fetch(message.id)
+        if (!exists) return;
+        this.announce(message);
+      } catch (e) {
+      }
     });
   }
 
-  public async announce(message: Message) {
-    var content = "";
+  async announce(message: Message) {
+    var content = message.content;
 
     this.rolePings.forEach(async (role) => {
-      content += `<@&${role.id}> `;
+      content += `\n<@&${role.id}>`;
     });
 
-    content += message.content;
     const announce = await this.channel.send(content);
-    await sleep(2000);
+    await sleep(5000);
     await announce.delete();
   }
 }
@@ -39,7 +43,7 @@ export default class Announcement {
 export class BoostAnnouncement extends Announcement {
   announceMessage: string;
 
-  constructor(client: Client, channel: TextChannel, announceMessage: string) {
+  constructor(client: Client, channel: TextBasedChannel, announceMessage: string) {
     super(client, channel);
     this.announceMessage = announceMessage;
   }
@@ -47,12 +51,13 @@ export class BoostAnnouncement extends Announcement {
   async init() {
     this.client.on("messageCreate", async (message) => {
       if (message.type !== MessageType.GuildBoost) return;
+      if (message.author.bot) return;
 
       await this.announce(message);
     });
   }
 
-  public async announce(message: Message) {
+  async announce(message: Message) {
     const content = formatString(this.announceMessage, {
       user: message.author.toString(),
     });

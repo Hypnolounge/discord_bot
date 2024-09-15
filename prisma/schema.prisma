@@ -63,3 +63,30 @@ model users {
   primary     String @db.VarChar(80)
   continent   String @db.VarChar(80)
 }
+
+model tickets_application {
+  id      Int    @id @default(autoincrement())
+  userID  BigInt
+  channel BigInt
+  opened  Float
+  closed  Float
+  reason  String @db.VarChar(20)
+}
+
+model tickets_issue {
+  id      Int    @id @default(autoincrement())
+  userID  BigInt
+  channel BigInt
+  opened  Float
+  closed  Float
+  reason  String @db.VarChar(20)
+}
+
+model tickets_misc {
+  id      Int    @id @default(autoincrement())
+  userID  BigInt
+  channel BigInt
+  opened  Float
+  closed  Float
+  reason  String @db.VarChar(20)
+}

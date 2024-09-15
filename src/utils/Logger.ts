@@ -44,7 +44,7 @@ class Logger {
     )) as TextChannel;
   }
 
-  public async standartLog(message: LogEntry) {
+  public async log(message: LogEntry) {
     if (!this.logChannel) {
       await this.init();
       log_error("Log channel not found");
