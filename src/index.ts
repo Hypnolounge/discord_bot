@@ -1,9 +1,7 @@
+import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
-import SelfRoles from "./self_roles";
-import AutoDeletes from "./autodeletes";
-import getGuild from "./utils/getGuild";
-import Announcements from "./announcements";
+import Strikes from "./strikes";
 
 // Load environment variables from .env file
 dotenv();
@@ -33,9 +31,14 @@ bot.on("ready", () => {
     type: ActivityType.Playing,
   });
 
-  SelfRoles(bot);
-  AutoDeletes(bot);
-  Announcements(bot);
+  Logger.init();
+  TicketLogger.init();
+
+  //SelfRoles(bot);
+  //AutoDeletes(bot);
+  //Announcements(bot);
+  //Tickets(bot);
+  Strikes(bot);
 });
 
 export default bot;

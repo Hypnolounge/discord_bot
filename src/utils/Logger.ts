@@ -1,53 +1,71 @@
-import { Client, ColorResolvable, EmbedBuilder, TextChannel } from "discord.js";
-import { getKeyValue } from "../DB/keyValueStore";
+import config from "@db/config";
+import {
+  Client,
+  ColorResolvable,
+  EmbedBuilder,
+  TextBasedChannel,
+} from "discord.js";
 import bot from "../index";
 import { log_error } from "./error";
+import getChannel from "./getChannel";
 
 export class LogEntry {
   title: string;
   message: string;
+  error?: any;
   timestamp: Date;
   type: "info" | "error" | "warn";
 
   constructor(
     title: string,
     message: string,
-    type: "info" | "error" | "warn" = "info"
+    type: "info" | "error" | "warn" = "info",
+    error?: any
   ) {
     this.title = title;
     this.message = message;
     this.timestamp = new Date();
     this.type = type;
+    this.error = error;
   }
 }
 
 class Logger {
   client: Client;
-  logChannel: TextChannel | undefined;
+  logChannel: TextBasedChannel | undefined;
   colors: { [key: string]: ColorResolvable } = {
     info: "Blurple",
     error: "Red",
     warn: "Yellow",
   };
+  channelID: string;
 
-  constructor(client: Client) {
+  constructor(client: Client, channelID: string) {
     this.client = client;
-    this.init();
+    this.channelID = channelID;
   }
 
   async init() {
-    const logChannel = await getKeyValue("log_channel");
-    if (!logChannel) return;
-
-    this.logChannel = (await this.client.channels.fetch(
-      logChannel
-    )) as TextChannel;
+    try {
+      const channel = await getChannel(this.channelID);
+      this.logChannel = channel;
+    } catch (e) {
+      log_error(e);
+    }
   }
 
-  public async log(message: LogEntry) {
+  public async log(message: LogEntry | EmbedBuilder) {
     if (!this.logChannel) {
-      await this.init();
-      log_error("Log channel not found");
+      return;
+    }
+
+    if (message instanceof EmbedBuilder) {
+      message
+        .setFooter({ text: "PupNicky" })
+        .setColor(this.colors.info)
+        .setTimestamp(new Date());
+
+      await this.logChannel.send({ embeds: [message] });
       return;
     }
 
@@ -58,8 +76,13 @@ class Logger {
       .setFooter({ text: "PupNicky" })
       .setColor(this.colors[message.type]);
 
+    if (message.error) {
+      embed.addFields({ name: "Error", value: message.error.toString() });
+    }
+
     await this.logChannel.send({ embeds: [embed] });
   }
 }
 
-export default new Logger(bot);
+export default new Logger(bot, config.channels.system_log);
+export const TicketLogger = new Logger(bot, config.channels.ticket_log);

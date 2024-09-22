@@ -1,6 +1,6 @@
+import { log_error } from "@utils/error";
+import getRole from "@utils/getRole";
 import { GuildMember, Role } from "discord.js";
-import { log_error } from "../../utils/error";
-import getRole from "../../utils/getRole";
 
 export class SelfRole {
   roleID: string;

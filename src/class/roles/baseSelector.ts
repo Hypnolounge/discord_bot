@@ -1,15 +1,14 @@
+import checkMessage from "@utils/message/checkMessage";
 import {
   ActionRowBuilder,
   Client,
   EmbedBuilder,
-  Message,
   TextBasedChannel,
 } from "discord.js";
-import { log_error } from "../../utils/error";
-import { getKeyValue, setKeyValue } from "../../DB/keyValueStore";
 import { SelfRole } from "./selfrole";
+import EventEmitter = require("events");
 
-export default class SelfRoleBaseSelector {
+export default class SelfRoleBaseSelector extends EventEmitter {
   client: Client;
   name: string;
   title: string;
@@ -26,6 +25,7 @@ export default class SelfRoleBaseSelector {
     channel: TextBasedChannel,
     description: string = ""
   ) {
+    super();
     this.client = client;
     this.name = name;
     this.title = title;
@@ -35,18 +35,16 @@ export default class SelfRoleBaseSelector {
   }
 
   public async init() {
-    this.messageID = await getKeyValue(this.name, "messageID");
-    const message = await this.checkMessage();
-
-    if (!message) {
-      this.createNewMessage();
-    } else {
-      this.updateMessage(message);
-    }
+    const message = await checkMessage(
+      this.name,
+      this.channel,
+      this.generateMessage()
+    );
     this.addListners();
+    return message;
   }
 
-  public generateMessage() {
+  protected generateMessage() {
     const embed = new EmbedBuilder()
       .setTitle(this.title)
       .setDescription(this.description)
@@ -54,36 +52,7 @@ export default class SelfRoleBaseSelector {
     return { embeds: [embed], components: [] as ActionRowBuilder<any>[] };
   }
 
-  public async checkMessage() {
-    try {
-      const message = await this.channel.messages.fetch(this.messageID);
-      return message;
-    } catch (error) {
-      log_error("Message not found in SelfRoleSelector " + this.name);
-      return false;
-    }
-  }
-
-  public async updateMessage(message: Message) {
-    const newMessage = this.generateMessage();
-    message.edit(newMessage);
-    return true;
-  }
-
-  public async createNewMessage() {
-    const newMessage = this.generateMessage();
-    try {
-      const message = await this.channel.send(newMessage);
-      this.messageID = message.id;
-      setKeyValue(this.name, this.messageID, "messageID");
-      return message;
-    } catch (error) {
-      log_error("Message not sent in SelfRoleSelector " + this.name);
-      return false;
-    }
-  }
-
-  public getRoleByEmoji(emoji: string | null) {
+  protected getRoleByEmoji(emoji: string | null) {
     if (!emoji) return;
 
     return this.roles.find((role) => {
@@ -95,5 +64,5 @@ export default class SelfRoleBaseSelector {
     });
   }
 
-  public addListners() {}
+  protected addListners() {}
 }

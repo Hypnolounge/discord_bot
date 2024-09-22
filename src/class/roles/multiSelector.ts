@@ -1,8 +1,26 @@
-import { EmbedBuilder, Message } from "discord.js";
+import { EmbedBuilder } from "discord.js";
 import SelfRoleBaseSelector from "./baseSelector";
 
 export default class SelfRoleSelectorMulti extends SelfRoleBaseSelector {
-  public generateMessage() {
+  public async init() {
+    const message = await super.init();
+    if (!message) return null;
+
+    const currentReactions = message.reactions.cache;
+    currentReactions.forEach((reaction) => {
+      if (!this.getRoleByEmoji(reaction.emoji.name)) {
+        reaction.remove();
+      }
+    });
+
+    this.roles.forEach((role) => {
+      message.react(role.emoji);
+    });
+
+    return message;
+  }
+
+  protected generateMessage() {
     var content = "";
 
     if (this.description) {
@@ -22,35 +40,7 @@ export default class SelfRoleSelectorMulti extends SelfRoleBaseSelector {
     return { embeds: [embed], components: [] };
   }
 
-  public async updateMessage(message: Message) {
-    const updated = super.updateMessage(message);
-
-    const currentReactions = message.reactions.cache;
-    currentReactions.forEach((reaction) => {
-      if (!this.getRoleByEmoji(reaction.emoji.name)) {
-        reaction.remove();
-      }
-    });
-
-    this.roles.forEach((role) => {
-      message.react(role.emoji);
-    });
-
-    return updated;
-  }
-
-  public async createNewMessage() {
-    const message = await super.createNewMessage();
-    if (!message) return message;
-
-    this.roles.forEach((role) => {
-      message.react(role.emoji);
-    });
-
-    return message;
-  }
-
-  public addListners() {
+  protected addListners() {
     this.client.on("messageReactionAdd", async (reaction, user) => {
       if (reaction.message.id !== this.messageID) return;
       if (user.bot) return;
@@ -59,7 +49,10 @@ export default class SelfRoleSelectorMulti extends SelfRoleBaseSelector {
       if (!role) return;
 
       const member = await reaction.message.guild?.members.fetch(user.id);
+      if (!member) return;
+      
       role.addUserRole(member);
+      this.emit("roleSelected", role, member);
     });
 
     this.client.on("messageReactionRemove", async (reaction, user) => {

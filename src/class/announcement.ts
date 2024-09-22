@@ -1,6 +1,6 @@
-import { Client, Message, MessageType, Role, TextBasedChannel, TextChannel } from "discord.js";
-import sleep from "../utils/sleep";
-import formatString from "../utils/formatString";
+import formatString from "@utils/formatString";
+import sleep from "@utils/sleep";
+import { Client, Message, MessageType, Role, TextBasedChannel } from "discord.js";
 
 export class Announcement {
   client: Client;
@@ -17,6 +17,7 @@ export class Announcement {
     this.client.on("messageCreate", async (message) => {
       if (message.channel.id !== this.channel.id) return;
       if (message.author.bot) return;
+      if (message.channel.isThread()) return;
       await sleep(10000);
       try{
         const exists = await this.channel.messages.fetch(message.id)
@@ -27,7 +28,7 @@ export class Announcement {
     });
   }
 
-  async announce(message: Message) {
+  protected async announce(message: Message) {
     var content = message.content;
 
     this.rolePings.forEach(async (role) => {

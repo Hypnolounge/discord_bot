@@ -1,7 +1,8 @@
+import formatString from "@utils/formatString";
 import { Client, Message, TextBasedChannel } from "discord.js";
-import formatString from "../utils/formatString";
+import EventEmitter = require("events");
 
-export default class AutoDelete {
+export default class AutoDelete extends EventEmitter {
   client: Client;
   channel: TextBasedChannel;
   deleteMessage: string;
@@ -17,19 +18,24 @@ export default class AutoDelete {
     characterMinimum = 0,
     excludedRoles = []
   ) {
+    super();
     this.client = client;
     this.channel = channel;
     this.deleteMessage = deleteMessage;
     this.contentOnly = contentOnly;
     this.characterMinimum = characterMinimum;
-    this.excludedRoles = excludedRoles
+    this.excludedRoles = excludedRoles;
   }
 
   public init() {
     this.client.on("messageCreate", (message) => {
       if (message.channel.id !== this.channel.id) return;
       if (message.author.bot) return;
-      if (this.excludedRoles.some((role) => message.member?.roles.cache.has(role))) return;
+      if (message.channel.isThread()) return;
+      if (
+        this.excludedRoles.some((role) => message.member?.roles.cache.has(role))
+      )
+        return;
 
       const passContentCheck = this.contentCheck(message);
       if (!passContentCheck) {
@@ -42,19 +48,22 @@ export default class AutoDelete {
         this.removeMessage(message, "Character count is too low");
         return;
       }
+      this.emit("messagePassed", message);
     });
   }
 
-  private async removeMessage(message: Message, reason = "") {
+  protected async removeMessage(message: Message, reason = "") {
     const formatedString = formatString(this.deleteMessage, {
       channelURL: message.channel.url,
       reason: reason,
     });
     await message.delete();
+    if(message.system) return;
     await message.author.send(formatedString);
+    this.emit("messageDeleted", message);
   }
 
-  private contentCheck(message: Message) {
+  protected contentCheck(message: Message) {
     if (!this.contentOnly) return true;
 
     const hasAttachment = message.attachments.size > 0;
@@ -65,12 +74,12 @@ export default class AutoDelete {
     return false;
   }
 
-  private hasLink(string: string) {
+  protected hasLink(string: string) {
     const linkRegex = /https?:\/\/\S+/;
     return linkRegex.test(string);
   }
 
-  private characterCheck(message: Message) {
+  protected characterCheck(message: Message) {
     if (this.characterMinimum === 0) return true;
     return message.content.length >= this.characterMinimum;
   }

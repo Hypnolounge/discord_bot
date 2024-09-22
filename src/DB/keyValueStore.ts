@@ -21,6 +21,6 @@ export async function setKeyValue(
     return true;
   } catch (e) {
     console.error(e);
-    return false;
+    throw new Error(`Error setting key value pair for ${query}`);
   }
 }

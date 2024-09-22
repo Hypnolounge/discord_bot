@@ -1,15 +1,7 @@
-import Logger, { LogEntry } from "./Logger";
 
-export function log_error(message: string) {
+export function log_error(message: any) {
   const current = getCurrentFormatedTime();
   console.error(current + message);
-  const log = new LogEntry("Error", message, "error");
-  Logger.log(log);
-}
-
-export function log_info(message: string) {
-  const current = getCurrentFormatedTime();
-  console.info(current + message);
 }
 
 function getCurrentFormatedTime(): string {

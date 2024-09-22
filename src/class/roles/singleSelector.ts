@@ -1,11 +1,11 @@
+import { log_error } from "@utils/error";
 import {
-  Client,
-  TextBasedChannel,
-  EmbedBuilder,
   ActionRowBuilder,
+  Client,
+  EmbedBuilder,
   StringSelectMenuBuilder,
+  TextBasedChannel,
 } from "discord.js";
-import { log_error } from "../../utils/error";
 import SelfRoleBaseSelector from "./baseSelector";
 import { SelfRole } from "./selfrole";
 
@@ -25,7 +25,7 @@ export default class SelfRoleSelectorSingle extends SelfRoleBaseSelector {
     this.placeholder = placeholder;
   }
 
-  public generateMessage() {
+  protected generateMessage() {
     const message = super.generateMessage() as {
       embeds: EmbedBuilder[];
       components: ActionRowBuilder<StringSelectMenuBuilder>[];
@@ -56,7 +56,7 @@ export default class SelfRoleSelectorSingle extends SelfRoleBaseSelector {
     return message;
   }
 
-  public addListners() {
+  protected addListners() {
     this.client.on("interactionCreate", async (interaction) => {
       if (!interaction.isStringSelectMenu()) return;
       if (interaction.customId !== this.name) return;
@@ -68,17 +68,19 @@ export default class SelfRoleSelectorSingle extends SelfRoleBaseSelector {
       const member = await interaction.guild?.members.fetch(
         interaction.user.id
       );
+      if (!member) return;
 
       const nonMatchingRoles = this.roles.filter((r) => r !== role);
       const nonMatchingRolesIDs = nonMatchingRoles.map((r) => r.roleID);
       try {
-        await member?.roles.remove(nonMatchingRolesIDs);
+        await member.roles.remove(nonMatchingRolesIDs);
       } catch (error) {
         log_error(
           "Error removing roles in SelfRoleSelectorSingle " + this.name
         );
       }
       role.addUserRole(member);
+      this.emit("roleSelected", role, member);
 
       interaction.reply({
         content: `You have selected the ${role.description} role!`,

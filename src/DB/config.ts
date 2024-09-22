@@ -17,6 +17,8 @@ const config = {
     strikes: "1125847005609082900",
     looking_for_tist: "1125024527932456960",
     looking_for_sub: "1125080015210557492",
+    system_log: "1125070879525715978",
+    ticket_log: "1125812635141669005",
   },
   roles: {
     mod: "1125012454699704373",
@@ -140,9 +142,9 @@ const config = {
     ],
   },
   categories: {
-    issues: "123456789012345678",
-    applications: "123456789012345678",
-    misc: "123456789012345678",
+    issues: "1128239530022015108",
+    applications: "1128239441459286058",
+    misc: "1184172707424764013",
     overflow: "1128239504050896999",
   },
 };
@@ -167,6 +169,8 @@ function getConfig() {
       strikes: "1248249254569443399",
       looking_for_tist: "1248249254569443399",
       looking_for_sub: "1248249254569443399",
+      system_log: config.channels.system_log,
+      ticket_log: config.channels.ticket_log,
     };
   } else {
     console.log("Running in production mode");

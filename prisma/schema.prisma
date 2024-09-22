@@ -38,10 +38,9 @@ model sessions {
 }
 
 model strikes {
-  id       Int    @id @default(autoincrement())
-  userID   BigInt
-  reason   String @db.Text
-  severity Int
+  id     Int    @id @default(autoincrement())
+  userID BigInt
+  reason String @db.Text
 
   @@index([userID], map: "strikes-userID")
 }

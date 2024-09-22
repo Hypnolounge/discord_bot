@@ -1,4 +1,5 @@
 import bot from "../index";
+import { log_error } from "./error";
 
 export default async function getGuild(
   guildID: string = process.env.GUILD_ID || ""
@@ -6,7 +7,7 @@ export default async function getGuild(
   try {
     return await bot.guilds.fetch(guildID);
   } catch (e) {
-    console.error(e);
-    return null;
+    log_error(e);
+    throw new Error(`Guild not found with ID ${guildID}`);
   }
 }

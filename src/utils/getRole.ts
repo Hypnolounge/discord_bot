@@ -1,17 +1,16 @@
-import { Guild } from "discord.js";
+import { log_error } from "./error";
 import getGuild from "./getGuild";
 
-export default async function getRole(
-  role: string,
-  guildID?: string,
-  guild?: Guild
-) {
-  const guildObject = guild || (await getGuild(guildID));
-  if (!guildObject) return null;
+export default async function getRole(roleID: string, guildID?: string) {
+  const guildObject = await getGuild(guildID);
   try {
-    return await guildObject.roles.fetch(role);
+    const role = await guildObject.roles.fetch(roleID);
+    if (!role) {
+      throw new Error(`Role not found with ID ${roleID}`);
+    }
+    return role;
   } catch (e) {
-    console.error(e);
-    return null;
+    log_error(e);
+    throw new Error(`Role not found with ID ${roleID}`);
   }
 }

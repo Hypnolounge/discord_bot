@@ -1,119 +1,102 @@
+import { Prisma } from "@prisma/client";
 import {
-  ActionRowBuilder,
   ButtonBuilder,
+  Interaction as ButtonInteraction,
   ButtonStyle,
   Client,
-  EmbedBuilder,
-  Message,
-  TextBasedChannel,
+  ModalBuilder,
+  ModalSubmitInteraction,
 } from "discord.js";
-import { getKeyValue, setKeyValue } from "../../DB/keyValueStore";
-import { log_error } from "../../utils/error";
-import { BaseTicket } from "./ticket";
-
-interface TicketType {
-  name: string;
-  description: string;
-  ticketClass: BaseTicket;
-}
+import { TicketAnswer, TicketCreator } from "./ticket";
+import TicketQuestion from "./ticketQuestion";
 
 export default class TicketOpener {
   client: Client;
   name: string;
   title: string;
   description: string;
-  messageID: string = "";
-  channel: TextBasedChannel;
-  ticketTypes: TicketType[];
+  questions: TicketQuestion[];
+  modal: ModalBuilder;
+  ticketCreator: TicketCreator<
+    | Prisma.tickets_applicationDelegate
+    | Prisma.tickets_issueDelegate
+    | Prisma.tickets_miscDelegate
+  >;
 
   constructor(
     client: Client,
     name: string,
     title: string,
-    channel: TextBasedChannel,
-    ticketTypes: TicketType[],
-    description: string = ""
+    description: string,
+    questions: TicketQuestion[],
+    ticketCreator: TicketCreator<
+      | Prisma.tickets_applicationDelegate
+      | Prisma.tickets_issueDelegate
+      | Prisma.tickets_miscDelegate
+    >
   ) {
     this.client = client;
-    this.name = name;
+    this.name = "open_ticket_" + name;
     this.title = title;
-    this.channel = channel;
-    this.ticketTypes = ticketTypes;
     this.description = description;
-  }
-
-  public async init() {
-    this.messageID = await getKeyValue(this.name, "messageID");
-    const message = await this.checkMessage();
-
-    if (!message) {
-      this.createNewMessage();
-    } else {
-      this.updateMessage(message);
-    }
+    this.ticketCreator = ticketCreator;
+    this.questions = questions;
+    this.modal = this.generateModal();
     this.addListners();
   }
 
-  public generateMessage() {
-    let content = this.description;
-
-    this.ticketTypes.forEach((type) => {
-      content += `${type.name} : ${type.description}\n`;
-    });
-
-    const embed = new EmbedBuilder()
-      .setTitle(this.title)
-      .setDescription(content)
-      .setFooter({ text: "PupNicky" });
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      this.ticketTypes.map((type) => {
-        return new ButtonBuilder()
-          .setCustomId(`open_${type.name}_button`)
-          .setLabel(type.name)
-          .setStyle(ButtonStyle.Primary);
-      })
-    );
-    return { embeds: [embed], components: [row] };
-  }
-
-  public async checkMessage() {
-    try {
-      const message = await this.channel.messages.fetch(this.messageID);
-      return message;
-    } catch (e) {
-      log_error("Message not found in TicketOpener " + this.name);
-      return null;
-    }
-  }
-
-  public async createNewMessage() {
-    const message = await this.channel.send(this.generateMessage());
-    this.messageID = message.id;
-    await setKeyValue(this.name, this.messageID, "messageID");
-    return message;
-  }
-
-  public async updateMessage(message: Message) {
-    const newMessage = this.generateMessage();
-    message.edit(newMessage);
-    return true;
-  }
-
-  public addListners() {
+  protected addListners() {
     this.client.on("interactionCreate", async (interaction) => {
-      if (!interaction.isButton()) return;
-      if (!interaction.customId.startsWith("open_")) return;
-      const ticketType = this.ticketTypes.find((type) =>
-        interaction.customId.includes(type.name)
-      );
-      if (!ticketType) return;
+      if (!interaction.isButton() && !interaction.isModalSubmit()) return;
+      if (interaction.customId !== this.name) return;
+      if (interaction.user.bot) return;
 
-      ticketType.ticketClass.openTicket(interaction.user.id);
+      if (interaction.isButton()) {
+        if (this.questions.length === 0) {
+          await this.openTicket(interaction);
+          return;
+        }
+        await interaction.showModal(this.modal);
+      } else {
+        await this.openTicket(interaction);
+      }
     });
   }
 
-  public async openTicket(member: any, ticketType: string) {
-    log_error("Open Ticket not implemented");
+  public getButton() {
+    const component = new ButtonBuilder()
+      .setCustomId(this.name)
+      .setLabel(this.title)
+      .setStyle(ButtonStyle.Primary);
+
+    return component;
+  }
+
+  protected generateModal() {
+    const modal = new ModalBuilder()
+      .setTitle(this.title)
+      .setCustomId(this.name);
+
+    this.questions.forEach((question) => {
+      modal.addComponents(question.generateComponent());
+    });
+
+    return modal;
+  }
+
+  protected async openTicket(
+    interaction: ButtonInteraction | ModalSubmitInteraction
+  ) {
+    const answers: TicketAnswer[] = [];
+    if (interaction.isModalSubmit()) {
+      this.questions.forEach((question) => {
+        const answer = interaction.fields.getField(question.title);
+        if (!answer || !answer.value) return;
+        answers.push({ question: question.title, answer: answer.value });
+      });
+    }
+    if (interaction.isButton() || interaction.isModalSubmit()) {
+      await this.ticketCreator.createTicket(interaction, answers);
+    }
   }
 }

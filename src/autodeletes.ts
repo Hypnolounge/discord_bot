@@ -1,16 +1,17 @@
-import { Client } from "discord.js";
-import getChannel from "./utils/getChannel";
-import { log_error } from "./utils/error";
+import { updateUser } from "@db/user";
+import { Client, Message } from "discord.js";
 import AutoDelete from "./class/autodelete";
-import config from "./DB/config";
+import config from "./db/config";
+import { log_error } from "./utils/error";
+import getChannel from "./utils/getChannel";
 
 export default function AutoDeletes(client: Client) {
-  //IntroAutoDelete(client);
-  //SFWAutoDelete(client);
-  //NSFWAutoDelete(client);
-  //HOCAutoDelete(client);
-  //HRCAutoDelete(client);
-  //FilesAutoDelete(client);
+  IntroAutoDelete(client);
+  SFWAutoDelete(client);
+  NSFWAutoDelete(client);
+  HOCAutoDelete(client);
+  HRCAutoDelete(client);
+  FilesAutoDelete(client);
 }
 
 async function IntroAutoDelete(client: Client) {
@@ -30,6 +31,12 @@ async function IntroAutoDelete(client: Client) {
   );
 
   introAutoDelete.init();
+
+  introAutoDelete.on("messagePassed", async (message: Message) => {
+    if (!message.member) return;
+    await message.member.roles.add(config.roles.member);
+    updateUser(message.member);
+  });
 }
 
 async function SFWAutoDelete(client: Client) {

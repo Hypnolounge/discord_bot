@@ -1,10 +1,11 @@
-import { Client, TextBasedChannel } from "discord.js";
-import getChannel from "./utils/getChannel";
-import { log_error } from "./utils/error";
-import config from "./DB/config";
-import { SelfRole, SelfRoleCorrelation } from "./class/roles/selfrole";
+import { updateUser } from "@db/user";
+import { Client, GuildMember, TextBasedChannel } from "discord.js";
 import SelfRoleSelectorMulti from "./class/roles/multiSelector";
+import { SelfRole, SelfRoleCorrelation } from "./class/roles/selfrole";
 import SelfRoleSelectorSingle from "./class/roles/singleSelector";
+import config from "./db/config";
+import { log_error } from "./utils/error";
+import getChannel from "./utils/getChannel";
 
 let channel: TextBasedChannel;
 
@@ -28,14 +29,14 @@ export default async function SelfRoles(client: Client) {
 async function PrimaryRoles(client: Client) {
   const hypnotistRole = new SelfRole(
     config.roles.primary.hypnotist,
-    "hypnotist",
+    "Hypnotist",
     "🔴"
   );
-  const switchRole = new SelfRole(config.roles.primary.switch, "switch", "🟡");
-  const subRole = new SelfRole(config.roles.primary.subject, "subject", "🟢");
+  const switchRole = new SelfRole(config.roles.primary.switch, "Switch", "🟡");
+  const subRole = new SelfRole(config.roles.primary.subject, "Subject", "🟢");
   const undecidedRole = new SelfRole(
     config.roles.primary.undecided,
-    "undecided",
+    "Undecided",
     "⚪"
   );
 
@@ -50,6 +51,16 @@ async function PrimaryRoles(client: Client) {
   );
 
   await primarySelector.init();
+
+  primarySelector.on(
+    "roleAdded",
+    async (role: SelfRole, member: GuildMember) => {
+      if (!role) return;
+      if (!member) return;
+
+      updateUser(member);
+    }
+  );
 }
 
 async function LookingForSession(client: Client) {
@@ -169,6 +180,16 @@ async function ContinentRoles(client: Client) {
   );
 
   await continentSelector.init();
+
+  continentSelector.on(
+    "roleAdded",
+    async (role: SelfRole, member: GuildMember) => {
+      if (!role) return;
+      if (!member) return;
+
+      updateUser(member);
+    }
+  );
 }
 
 async function Notifications(client: Client) {
