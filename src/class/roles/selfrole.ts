@@ -16,10 +16,10 @@ export class SelfRole {
   }
 
   public async init() {
-    this.role = await getRole(this.roleID);
-    if (!this.role) {
-      log_error("Role not found in SelfRole " + this.description);
-      return;
+    try {
+      this.role = await getRole(this.roleID);
+    } catch (error) {
+      log_error(error);
     }
   }
 

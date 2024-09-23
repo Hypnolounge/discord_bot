@@ -1,30 +1,27 @@
+import { TextChannelGroup } from "@typings/TextChannelGroup";
+import bindMessageCreated from "@utils/events/messageCreated";
 import formatString from "@utils/formatString";
 import sleep from "@utils/sleep";
-import { Client, Message, MessageType, Role, TextBasedChannel } from "discord.js";
+import { Message, MessageType, Role } from "discord.js";
 
 export class Announcement {
-  client: Client;
-  channel: TextBasedChannel;
+  channel: TextChannelGroup;
   rolePings: Role[];
 
-  constructor(client: Client, channel: TextBasedChannel, rolePings: Role[] = []) {
-    this.client = client;
+  constructor(channel: TextChannelGroup, rolePings: Role[] = []) {
     this.channel = channel;
     this.rolePings = rolePings;
   }
 
   async init() {
-    this.client.on("messageCreate", async (message) => {
-      if (message.channel.id !== this.channel.id) return;
-      if (message.author.bot) return;
-      if (message.channel.isThread()) return;
+    bindMessageCreated(this.channel.id, async (message) => {
+      if (message.system) return;
       await sleep(10000);
-      try{
-        const exists = await this.channel.messages.fetch(message.id)
+      try {
+        const exists = await this.channel.messages.fetch(message.id);
         if (!exists) return;
         this.announce(message);
-      } catch (e) {
-      }
+      } catch (e) {}
     });
   }
 
@@ -44,17 +41,16 @@ export class Announcement {
 export class BoostAnnouncement extends Announcement {
   announceMessage: string;
 
-  constructor(client: Client, channel: TextBasedChannel, announceMessage: string) {
-    super(client, channel);
+  constructor(channel: TextChannelGroup, announceMessage: string) {
+    super(channel);
     this.announceMessage = announceMessage;
   }
 
   async init() {
-    this.client.on("messageCreate", async (message) => {
+    bindMessageCreated(this.channel.id, async (message) => {
       if (message.type !== MessageType.GuildBoost) return;
-      if (message.author.bot) return;
 
-      await this.announce(message);
+      this.announce(message);
     });
   }
 
@@ -63,6 +59,7 @@ export class BoostAnnouncement extends Announcement {
       user: message.author.toString(),
     });
     const announce = await this.channel.send(content);
+
     await sleep(2000);
     await announce.delete();
   }

@@ -10,7 +10,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  Client,
   EmbedBuilder,
   TextInputStyle,
 } from "discord.js";
@@ -26,25 +25,20 @@ const ticketAutoMessage = [
   "6. Please send us some proof of your age. Read the https://discord.com/channels/1125008815272759408/1232397100310986752 for what kind we will accept.",
 ];
 
-export default async function Tickets(client: Client) {
-  const channel = await getChannel(config.channels.tickets);
+export default async function Tickets() {
+  try {
+    const channel = await getChannel(config.channels.tickets);
 
-  if (!channel || !channel.isTextBased()) {
-    log_error("Ticket channel not found");
-    return;
+    const ticketTypes = [ApplicationTicket(), IssueTicket(), MiscTicket()];
+
+    const message = await checkMessage(
+      "ticket_opener",
+      channel,
+      generateMessage(ticketTypes)
+    );
+  } catch (error) {
+    log_error(error);
   }
-
-  const ticketTypes = [
-    ApplicationTicket(client),
-    IssueTicket(client),
-    MiscTicket(client),
-  ];
-
-  const message = await checkMessage(
-    "ticket_opener",
-    channel,
-    generateMessage(ticketTypes)
-  );
 }
 
 function generateMessage(types: TicketOpener[]) {
@@ -65,7 +59,7 @@ function generateMessage(types: TicketOpener[]) {
   return { embeds: [embed], components: [row] } as MessageOptions;
 }
 
-function ApplicationTicket(client: Client) {
+function ApplicationTicket() {
   const extraButtons = {
     approved: new ButtonBuilder()
       .setLabel("Approve")
@@ -83,7 +77,6 @@ function ApplicationTicket(client: Client) {
   };
 
   return new TicketOpener(
-    client,
     "application",
     "Application",
     "You would like to become a member of the Hypnolounge.",
@@ -108,7 +101,6 @@ function ApplicationTicket(client: Client) {
       ),
     ],
     new TicketCreator<Prisma.tickets_applicationDelegate>(
-      client,
       "application",
       config.categories.applications,
       prisma.tickets_application,
@@ -118,9 +110,8 @@ function ApplicationTicket(client: Client) {
   );
 }
 
-function IssueTicket(client: Client) {
+function IssueTicket() {
   return new TicketOpener(
-    client,
     "issue_opener",
     "Issue",
     "You would like to report an issue in general ranging from bugs, to server issues, to serious incidents.",
@@ -130,7 +121,6 @@ function IssueTicket(client: Client) {
       new TicketQuestion("People Involved", false, TextInputStyle.Paragraph),
     ],
     new TicketCreator<Prisma.tickets_issueDelegate>(
-      client,
       "issue",
       config.categories.issues,
       prisma.tickets_issue
@@ -138,15 +128,13 @@ function IssueTicket(client: Client) {
   );
 }
 
-function MiscTicket(client: Client) {
+function MiscTicket() {
   return new TicketOpener(
-    client,
     "misc_opener",
     "Misc",
     "Anything else. (including invites)",
     [],
     new TicketCreator<Prisma.tickets_miscDelegate>(
-      client,
       "misc",
       config.categories.misc,
       prisma.tickets_misc

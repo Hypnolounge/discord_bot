@@ -1,10 +1,6 @@
 import config from "@db/config";
-import {
-  Client,
-  ColorResolvable,
-  EmbedBuilder,
-  TextBasedChannel,
-} from "discord.js";
+import { TextChannelGroup } from "@typings/TextChannelGroup";
+import { Client, ColorResolvable, EmbedBuilder } from "discord.js";
 import bot from "../index";
 import { log_error } from "./error";
 import getChannel from "./getChannel";
@@ -32,7 +28,7 @@ export class LogEntry {
 
 class Logger {
   client: Client;
-  logChannel: TextBasedChannel | undefined;
+  logChannel: TextChannelGroup | undefined;
   colors: { [key: string]: ColorResolvable } = {
     info: "Blurple",
     error: "Red",

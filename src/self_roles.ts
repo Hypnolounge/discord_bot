@@ -1,5 +1,6 @@
 import { updateUser } from "@db/user";
-import { Client, GuildMember, TextBasedChannel } from "discord.js";
+import { TextChannelGroup } from "@typings/TextChannelGroup";
+import { GuildMember } from "discord.js";
 import SelfRoleSelectorMulti from "./class/roles/multiSelector";
 import { SelfRole, SelfRoleCorrelation } from "./class/roles/selfrole";
 import SelfRoleSelectorSingle from "./class/roles/singleSelector";
@@ -7,26 +8,27 @@ import config from "./db/config";
 import { log_error } from "./utils/error";
 import getChannel from "./utils/getChannel";
 
-let channel: TextBasedChannel;
+let channel: TextChannelGroup;
 
-export default async function SelfRoles(client: Client) {
-  const roles = await getChannel(config.channels.roles);
-  if (!roles || !roles.isTextBased()) {
-    log_error("Roles channel not found");
-    return;
+export default async function SelfRoles() {
+  try {
+    const roles = await getChannel(config.channels.roles);
+
+    channel = roles;
+  } catch (error) {
+    log_error(error);
   }
-  channel = roles;
 
-  await PrimaryRoles(client);
-  await LookingForSession(client);
-  await LookingForNotification(client);
-  await SessionTypes(client);
-  await OpenForDMs(client);
-  await ContinentRoles(client);
-  await Notifications(client);
+  await PrimaryRoles();
+  await LookingForSession();
+  await LookingForNotification();
+  await SessionTypes();
+  await OpenForDMs();
+  await ContinentRoles();
+  await Notifications();
 }
 
-async function PrimaryRoles(client: Client) {
+async function PrimaryRoles() {
   const hypnotistRole = new SelfRole(
     config.roles.primary.hypnotist,
     "Hypnotist",
@@ -41,8 +43,7 @@ async function PrimaryRoles(client: Client) {
   );
 
   const primarySelector = new SelfRoleSelectorSingle(
-    client,
-    "primary_role_selector",
+    "primaryRoleSelector",
     "Primary Role",
     [hypnotistRole, switchRole, subRole, undecidedRole],
     channel,
@@ -63,7 +64,7 @@ async function PrimaryRoles(client: Client) {
   );
 }
 
-async function LookingForSession(client: Client) {
+async function LookingForSession() {
   const open = new SelfRole(
     config.roles.session.open,
     "open for sessions",
@@ -81,8 +82,7 @@ async function LookingForSession(client: Client) {
   );
 
   const lookingForSelector = new SelfRoleSelectorSingle(
-    client,
-    "looking_for_selector",
+    "lookingForSelector",
     "Looking For Sessions",
     [open, maybe, closed],
     channel,
@@ -93,7 +93,7 @@ async function LookingForSession(client: Client) {
   await lookingForSelector.init();
 }
 
-async function LookingForNotification(client: Client) {
+async function LookingForNotification() {
   const correlation = {
     [config.roles.primary.hypnotist]: config.roles.now_announce.hypnotist, // looking-for-tist
     [config.roles.primary.switch]: config.roles.now_announce.switch, // looking-for-switch
@@ -104,8 +104,7 @@ async function LookingForNotification(client: Client) {
   const looking = new SelfRoleCorrelation("", "⌚", correlation);
 
   const lookingForSelector = new SelfRoleSelectorMulti(
-    client,
-    "looking_for_notification_selector",
+    "lookingForNotificationsSelector",
     "looking-for Notifications",
     [looking],
     channel,
@@ -118,7 +117,7 @@ async function LookingForNotification(client: Client) {
   await lookingForSelector.init();
 }
 
-async function SessionTypes(client: Client) {
+async function SessionTypes() {
   const text = new SelfRole(config.roles.session.text, "text", "🗒️");
   const voice = new SelfRole(config.roles.session.voice, "voice", "☎️");
   const video = new SelfRole(config.roles.session.video, "video", "🎞️");
@@ -134,8 +133,7 @@ async function SessionTypes(client: Client) {
   );
 
   const sessionTypeSelector = new SelfRoleSelectorMulti(
-    client,
-    "session_type_selector",
+    "sessionTypeSelector",
     "Session Type",
     [text, voice, video, inPerson, covert],
     channel
@@ -144,13 +142,12 @@ async function SessionTypes(client: Client) {
   await sessionTypeSelector.init();
 }
 
-async function OpenForDMs(client: Client) {
+async function OpenForDMs() {
   const open = new SelfRole(config.roles.dms.open, "Open for DMs", "✉️");
   const ask = new SelfRole(config.roles.dms.ask, "Ask for DM", "🚫");
 
   const dmSelector = new SelfRoleSelectorSingle(
-    client,
-    "dm_selector",
+    "dmSelector",
     "Open for DMs",
     [open, ask],
     channel,
@@ -161,7 +158,7 @@ async function OpenForDMs(client: Client) {
   await dmSelector.init();
 }
 
-async function ContinentRoles(client: Client) {
+async function ContinentRoles() {
   const roles: SelfRole[] = [];
 
   for (const continent of config.roles.continent) {
@@ -170,8 +167,7 @@ async function ContinentRoles(client: Client) {
   }
 
   const continentSelector = new SelfRoleSelectorSingle(
-    client,
-    "continent_selector",
+    "continentSelector",
     "Continent Role",
     roles,
     channel,
@@ -192,7 +188,7 @@ async function ContinentRoles(client: Client) {
   );
 }
 
-async function Notifications(client: Client) {
+async function Notifications() {
   const announcements = new SelfRole(
     config.roles.announcements,
     "Announcements",
@@ -207,8 +203,7 @@ async function Notifications(client: Client) {
   );
 
   const notificationSelector = new SelfRoleSelectorMulti(
-    client,
-    "notification_selector",
+    "notificationSelector",
     "Notification Roles",
     [announcements, hoc, gaming, minecraft],
     channel,

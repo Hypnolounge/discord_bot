@@ -1,6 +1,11 @@
+import { initializeInteractionCreated } from "@utils/events/interactionCreated";
+import { initializeMessageCreated } from "@utils/events/messageCreated";
+import { initializeMessageReactionAdd } from "@utils/events/messageReactionAdd";
+import { initializeMessageReactionRemove } from "@utils/events/messageReactionRemove";
 import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
+import SelfRoles from "./self_roles";
 import Strikes from "./strikes";
 
 // Load environment variables from .env file
@@ -21,6 +26,8 @@ const bot = new Client({
   ],
 });
 
+export default bot;
+
 // Event triggered when the bot is ready
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user?.tag}!`);
@@ -31,17 +38,24 @@ bot.on("ready", () => {
     type: ActivityType.Playing,
   });
 
+  init();
+
   Logger.init();
   TicketLogger.init();
 
-  //SelfRoles(bot);
-  //AutoDeletes(bot);
-  //Announcements(bot);
-  //Tickets(bot);
-  Strikes(bot);
+  SelfRoles();
+  //AutoDeletes();
+  //Announcements();
+  //Tickets();
+  Strikes();
 });
 
-export default bot;
+function init() {
+  initializeInteractionCreated();
+  initializeMessageCreated();
+  initializeMessageReactionAdd();
+  initializeMessageReactionRemove();
+}
 
 // Log in to Discord using the bot token from the .env file
 bot.login(process.env.BOT_TOKEN);

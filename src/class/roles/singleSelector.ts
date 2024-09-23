@@ -1,10 +1,10 @@
+import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { log_error } from "@utils/error";
+import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import {
   ActionRowBuilder,
-  Client,
   EmbedBuilder,
   StringSelectMenuBuilder,
-  TextBasedChannel,
 } from "discord.js";
 import SelfRoleBaseSelector from "./baseSelector";
 import { SelfRole } from "./selfrole";
@@ -13,15 +13,14 @@ export default class SelfRoleSelectorSingle extends SelfRoleBaseSelector {
   placeholder: string;
 
   constructor(
-    client: Client,
     name: string,
     title: string,
     roles: SelfRole[],
-    channel: TextBasedChannel,
+    channel: TextChannelGroup,
     placeholder: string,
     description: string = ""
   ) {
-    super(client, name, title, roles, channel, description);
+    super(name, title, roles, channel, description);
     this.placeholder = placeholder;
   }
 
@@ -57,35 +56,37 @@ export default class SelfRoleSelectorSingle extends SelfRoleBaseSelector {
   }
 
   protected addListners() {
-    this.client.on("interactionCreate", async (interaction) => {
-      if (!interaction.isStringSelectMenu()) return;
-      if (interaction.customId !== this.name) return;
-      const role = this.roles.find(
-        (role) => role.roleID === interaction.values[0]
-      );
-      if (!role) return;
-
-      const member = await interaction.guild?.members.fetch(
-        interaction.user.id
-      );
-      if (!member) return;
-
-      const nonMatchingRoles = this.roles.filter((r) => r !== role);
-      const nonMatchingRolesIDs = nonMatchingRoles.map((r) => r.roleID);
-      try {
-        await member.roles.remove(nonMatchingRolesIDs);
-      } catch (error) {
-        log_error(
-          "Error removing roles in SelfRoleSelectorSingle " + this.name
+    bindInteractionCreated(
+      this.name,
+      "stringSelect",
+      async (interaction, action) => {
+        const role = this.roles.find(
+          (role) => role.roleID === interaction.values[0]
         );
-      }
-      role.addUserRole(member);
-      this.emit("roleSelected", role, member);
+        if (!role) return;
 
-      interaction.reply({
-        content: `You have selected the ${role.description} role!`,
-        ephemeral: true,
-      });
-    });
+        const member = await interaction.guild?.members.fetch(
+          interaction.user.id
+        );
+        if (!member) return;
+
+        const nonMatchingRoles = this.roles.filter((r) => r !== role);
+        const nonMatchingRolesIDs = nonMatchingRoles.map((r) => r.roleID);
+        try {
+          await member.roles.remove(nonMatchingRolesIDs);
+        } catch (error) {
+          log_error(
+            "Error removing roles in SelfRoleSelectorSingle " + this.name
+          );
+        }
+        role.addUserRole(member);
+        this.emit("roleSelected", role, member);
+
+        interaction.reply({
+          content: `You have selected the ${role.description} role!`,
+          ephemeral: true,
+        });
+      }
+    );
   }
 }

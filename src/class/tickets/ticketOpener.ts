@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
+import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import {
   ButtonBuilder,
   Interaction as ButtonInteraction,
   ButtonStyle,
-  Client,
   ModalBuilder,
   ModalSubmitInteraction,
 } from "discord.js";
@@ -11,7 +11,6 @@ import { TicketAnswer, TicketCreator } from "./ticket";
 import TicketQuestion from "./ticketQuestion";
 
 export default class TicketOpener {
-  client: Client;
   name: string;
   title: string;
   description: string;
@@ -24,7 +23,6 @@ export default class TicketOpener {
   >;
 
   constructor(
-    client: Client,
     name: string,
     title: string,
     description: string,
@@ -35,8 +33,7 @@ export default class TicketOpener {
       | Prisma.tickets_miscDelegate
     >
   ) {
-    this.client = client;
-    this.name = "open_ticket_" + name;
+    this.name = name;
     this.title = title;
     this.description = description;
     this.ticketCreator = ticketCreator;
@@ -46,26 +43,32 @@ export default class TicketOpener {
   }
 
   protected addListners() {
-    this.client.on("interactionCreate", async (interaction) => {
-      if (!interaction.isButton() && !interaction.isModalSubmit()) return;
-      if (interaction.customId !== this.name) return;
-      if (interaction.user.bot) return;
-
-      if (interaction.isButton()) {
+    bindInteractionCreated(
+      "openTicket",
+      "button",
+      async (interaction, action) => {
+        if (action !== this.name) return;
         if (this.questions.length === 0) {
           await this.openTicket(interaction);
-          return;
+        } else {
+          await interaction.showModal(this.modal);
         }
-        await interaction.showModal(this.modal);
-      } else {
+      }
+    );
+
+    bindInteractionCreated(
+      "openTicket",
+      "modal",
+      async (interaction, action) => {
+        if (action !== this.name) return;
         await this.openTicket(interaction);
       }
-    });
+    );
   }
 
   public getButton() {
     const component = new ButtonBuilder()
-      .setCustomId(this.name)
+      .setCustomId("openTicket:" + this.name)
       .setLabel(this.title)
       .setStyle(ButtonStyle.Primary);
 
@@ -74,7 +77,7 @@ export default class TicketOpener {
 
   protected generateModal() {
     const modal = new ModalBuilder()
-      .setTitle(this.title)
+      .setTitle("openTicket:" + this.title)
       .setCustomId(this.name);
 
     this.questions.forEach((question) => {

@@ -1,5 +1,6 @@
 import config from "@db/config";
 import { log_error } from "@utils/error";
+import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import getChannel from "@utils/getChannel";
 import getMember from "@utils/getMember";
 import checkMessage, { MessageOptions } from "@utils/message/checkMessage";
@@ -7,10 +8,9 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  Client,
-  Collection,
   EmbedBuilder,
   ModalBuilder,
+  ModalSubmitInteraction,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
@@ -23,7 +23,7 @@ interface ModalData {
   type: TextInputStyle;
 }
 const actions: { [key: string]: ModalData[] } = {
-  strike_give: [
+  give: [
     {
       id: "user",
       label: "User (ID, Name or display name)",
@@ -37,7 +37,7 @@ const actions: { [key: string]: ModalData[] } = {
       type: TextInputStyle.Paragraph,
     },
   ],
-  strike_view: [
+  view: [
     {
       id: "user",
       label: "User (ID, Name or display name)",
@@ -45,7 +45,13 @@ const actions: { [key: string]: ModalData[] } = {
       type: TextInputStyle.Short,
     },
   ],
-  strike_delete: [
+  delete: [
+    {
+      id: "user",
+      label: "User (ID, Name or display name)",
+      required: true,
+      type: TextInputStyle.Short,
+    },
     {
       id: "strike_id",
       label: "Strike ID",
@@ -55,17 +61,18 @@ const actions: { [key: string]: ModalData[] } = {
   ],
 };
 
-export default async function Strikes(client: Client) {
-  const channel = await getChannel(config.channels.strikes);
+const scope = "strike";
 
-  if (!channel || !channel.isTextBased()) {
-    log_error("Ticket channel not found");
-    return;
+export default async function Strikes() {
+  try {
+    const channel = await getChannel(config.channels.strikes);
+
+    const message = await checkMessage("strikes", channel, generateMessage());
+
+    addListeners();
+  } catch (error) {
+    log_error(error);
   }
-
-  const message = await checkMessage("strikes", channel, generateMessage());
-
-  addListeners(client);
 }
 
 function generateMessage() {
@@ -78,17 +85,17 @@ function generateMessage() {
   const giveStrike = new ButtonBuilder()
     .setLabel("Give Strike")
     .setStyle(ButtonStyle.Primary)
-    .setCustomId("strike_give");
+    .setCustomId("strike:give");
 
   const viewStrikes = new ButtonBuilder()
     .setLabel("View Strikes")
     .setStyle(ButtonStyle.Primary)
-    .setCustomId("strike_view");
+    .setCustomId("strike:view");
 
   const deleteStrike = new ButtonBuilder()
     .setLabel("Delete Strike")
     .setStyle(ButtonStyle.Primary)
-    .setCustomId("strike_delete");
+    .setCustomId("strike:delete");
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     giveStrike,
@@ -99,103 +106,139 @@ function generateMessage() {
   return { embeds: [embed], components: [row] } as MessageOptions;
 }
 
-function addListeners(client: Client) {
-  client.on("interactionCreate", async (interaction) => {
-    if (interaction.user.bot) return;
-    if (!interaction.member) return;
-    if (!interaction.isButton() && !interaction.isModalSubmit()) return;
-    if (!interaction.customId.startsWith("strike")) return;
+function addListeners() {
+  bindInteractionCreated(scope, "button", async (interaction, action) => {
+    await interaction.showModal(getModal(action));
+  });
 
-    if (interaction.isButton()) {
-      await interaction.showModal(getModal(interaction.customId));
-    } else if (interaction.isModalSubmit()) {
-      await interaction.deferReply({ ephemeral: true });
+  bindInteractionCreated(scope, "modal", async (interaction, action) => {
+    await interaction.deferReply({ ephemeral: true });
 
-      if (!interaction.customId) return;
-      if (!actions[interaction.customId]) return;
-      const data: { [key: string]: string } = {};
+    const data: { [key: string]: string } = {};
 
-      actions[interaction.customId].forEach((input) => {
-        const value = interaction.fields.getField(input.id).value;
-        data[input.id] = value;
-      });
-
-      if (interaction.customId === "strike_give") {
-        const user = await checkMember(data.user);
-
-        if (typeof user === "string")
-          return await interaction.followUp({ content: user, ephemeral: true });
-
-        try {
-          const strike = await prisma.strikes.create({
-            data: {
-              userID: parseInt(user.id),
-              reason: data.reason,
-            },
-          });
-
-          await interaction.followUp(
-            `Strike added to ${user.displayName} with ID ${strike.id}`
-          );
-
-          const strikeCount = await prisma.strikes.count({
-            where: { userID: parseInt(user.id) },
-          });
-
-          if (strikeCount === 3) {
-            await user.send(
-              "You have 3 strikes. You are banned from the server"
-            );
-            await user.ban({ reason: "3 strikes" });
-          }
-          
-        } catch (e) {
-          return await interaction.followUp("Failed to add strike");
-        }
-      } else if (interaction.customId === "strike_view") {
-        const user = await getMember(data.user);
-
-        if (!user) {
-          interaction.editReply("User not found");
-          return;
-        }
-      } else if (interaction.customId === "strike_delete") {
-        // Delete strike
-      }
+    actions[action].forEach((input) => {
+      const value = interaction.fields.getField(input.id).value;
+      data[input.id] = value;
+    });
+    console.log(data);
+    switch (action) {
+      case "give":
+        await giveStrike(data, interaction);
+        break;
+      case "view":
+        await viewStrike(data, interaction);
+        break;
+      case "delete":
+        await deleteStrike(data, interaction);
+        break;
+      default:
+        break;
     }
   });
 }
 
-async function checkMember(member: string) {
-  let user = await getMember(member);
+async function giveStrike(
+  data: { [key: string]: string },
+  interaction: ModalSubmitInteraction
+) {
+  try {
+    const user = await getMember(data.user);
+    const strike = await prisma.strikes.create({
+      data: {
+        userID: parseInt(user.id),
+        reason: data.reason,
+      },
+    });
 
-  if (!user) return "User not found";
+    await interaction.followUp(
+      `Strike added to ${user.displayName} with ID ${strike.id}`
+    );
 
-  if (user instanceof Collection) {
-    if (user.size === 1) {
-      const first = user.first();
-      if (first) {
-        user = first;
-      } else {
-        return "User not found";
-      }
-    } else {
-      return "Multiple users found";
+    const strikeCount = await prisma.strikes.count({
+      where: { userID: parseInt(user.id) },
+    });
+
+    if (strikeCount === 3) {
+      await user.send("You have 3 strikes. You are banned from the server");
+      await user.ban({ reason: "3 strikes" });
     }
+  } catch (e) {
+    log_error(e);
+    return await interaction.followUp("Failed to add strike \n" + e);
   }
-
-  return user;
 }
 
-function getModal(customId: string) {
-  if (!actions[customId]) {
-    log_error("Invalid action " + customId);
+async function viewStrike(
+  data: { [key: string]: string },
+  interaction: ModalSubmitInteraction
+) {
+  try {
+    const user = await getMember(data.user);
+
+    const strikes = await prisma.strikes.findMany({
+      where: { userID: parseInt(user.id) },
+    });
+
+    if (strikes.length === 0) {
+      return await interaction.followUp({
+        content: "No strikes found",
+        ephemeral: true,
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(`${user.displayName}'s Strikes`)
+      .setColor("Blurple")
+      .setFooter({ text: "PupNicky" });
+
+    strikes.forEach((strike) => {
+      embed.addFields({
+        name: `ID: ${strike.id}`,
+        value: `Reason: ${strike.reason}`,
+      });
+    });
+
+    await interaction.followUp({ embeds: [embed], ephemeral: true });
+  } catch (error) {
+    log_error(error);
+    return await interaction.followUp({
+      content: "Failed to view strikes \n" + error,
+      ephemeral: true,
+    });
+  }
+}
+
+async function deleteStrike(
+  data: { [key: string]: string },
+  interaction: ModalSubmitInteraction
+) {
+  try {
+    const user = await getMember(data.user);
+    const strike = await prisma.strikes.delete({
+      where: { id: parseInt(data.strike_id), userID: parseInt(user.id) },
+    });
+
+    await interaction.followUp(
+      `Strike with ID ${strike.id} deleted for ${user.displayName}`
+    );
+  } catch (error) {
+    log_error(error);
+    return await interaction.followUp({
+      content: "Failed to delete strike \n" + error,
+      ephemeral: true,
+    });
+  }
+}
+
+function getModal(action: string) {
+  if (!actions[action]) {
+    log_error("Invalid action " + action);
     return new ModalBuilder().setTitle("Invalid Action");
   }
 
   const components: ActionRowBuilder<TextInputBuilder>[] = [];
 
-  actions[customId].forEach((input) => {
+  actions[action].forEach((input) => {
     const component = new TextInputBuilder()
       .setCustomId(input.id)
       .setRequired(input.required)
@@ -208,7 +251,7 @@ function getModal(customId: string) {
   });
 
   return new ModalBuilder()
-    .setTitle("Give Strike")
-    .setCustomId(customId)
+    .setTitle("Strike")
+    .setCustomId(`${scope}:${action}`)
     .addComponents(components);
 }

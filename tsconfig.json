@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
     "noImplicitAny": true,
     "declaration": false,
@@ -14,7 +14,9 @@
     "paths": {
       "@utils/*": ["src/utils/*"],
       "@class/*": ["src/class/*"],
-      "@db/*": ["src/db/*"]
+      "@db/*": ["src/db/*"],
+      "@typings/*": ["src/typings/*"],
+      "@bot": ["src/index.ts"]
     }
   },
   "include": ["src"],

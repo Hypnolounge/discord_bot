@@ -1,10 +1,11 @@
+import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { log_error } from "@utils/error";
-import { MessageCreateOptions, TextBasedChannel } from "discord.js";
+import { MessageCreateOptions } from "discord.js";
 import { setKeyValue } from "src/db/keyValueStore";
 
 export default async function createMessage(
   name: string,
-  channel: TextBasedChannel,
+  channel: TextChannelGroup,
   options: MessageCreateOptions
 ) {
   try {

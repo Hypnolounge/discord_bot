@@ -1,25 +1,25 @@
+import bindMessageCreated from "@utils/events/messageCreated";
 import formatString from "@utils/formatString";
-import { Client, Message, TextBasedChannel } from "discord.js";
-import EventEmitter = require("events");
+import { Message } from "discord.js";
+import { EventEmitter } from "events";
+import { TextChannelGroup } from "src/typings/TextChannelGroup";
+
 
 export default class AutoDelete extends EventEmitter {
-  client: Client;
-  channel: TextBasedChannel;
+  channel: TextChannelGroup;
   deleteMessage: string;
   contentOnly: boolean;
   characterMinimum: number;
   excludedRoles: string[];
 
   constructor(
-    client: Client,
-    channel: TextBasedChannel,
+    channel: TextChannelGroup,
     deleteMessage: string,
     contentOnly = false,
     characterMinimum = 0,
     excludedRoles = []
   ) {
     super();
-    this.client = client;
     this.channel = channel;
     this.deleteMessage = deleteMessage;
     this.contentOnly = contentOnly;
@@ -28,10 +28,7 @@ export default class AutoDelete extends EventEmitter {
   }
 
   public init() {
-    this.client.on("messageCreate", (message) => {
-      if (message.channel.id !== this.channel.id) return;
-      if (message.author.bot) return;
-      if (message.channel.isThread()) return;
+    bindMessageCreated(this.channel.id, async (message) => {
       if (
         this.excludedRoles.some((role) => message.member?.roles.cache.has(role))
       )
@@ -58,7 +55,7 @@ export default class AutoDelete extends EventEmitter {
       reason: reason,
     });
     await message.delete();
-    if(message.system) return;
+    if (message.system) return;
     await message.author.send(formatedString);
     this.emit("messageDeleted", message);
   }

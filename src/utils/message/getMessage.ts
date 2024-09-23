@@ -1,10 +1,10 @@
 import { getKeyValue } from "@db/keyValueStore";
+import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { log_error } from "@utils/error";
-import { TextBasedChannel } from "discord.js";
 
 export default async function getMessage(
   name: string,
-  channel: TextBasedChannel
+  channel: TextChannelGroup
 ) {
   const messageID = await getKeyValue(name, "messageID");
   if (!messageID) {

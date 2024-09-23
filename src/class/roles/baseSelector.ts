@@ -1,32 +1,26 @@
+import { TextChannelGroup } from "@typings/TextChannelGroup";
+import { log_error } from "@utils/error";
 import checkMessage from "@utils/message/checkMessage";
-import {
-  ActionRowBuilder,
-  Client,
-  EmbedBuilder,
-  TextBasedChannel,
-} from "discord.js";
+import { ActionRowBuilder, EmbedBuilder } from "discord.js";
+import EventEmitter from "node:events";
 import { SelfRole } from "./selfrole";
-import EventEmitter = require("events");
 
 export default class SelfRoleBaseSelector extends EventEmitter {
-  client: Client;
   name: string;
   title: string;
   description: string;
   roles: SelfRole[];
   messageID: string = "";
-  channel: TextBasedChannel;
+  channel: TextChannelGroup;
 
   constructor(
-    client: Client,
     name: string,
     title: string,
     roles: SelfRole[],
-    channel: TextBasedChannel,
+    channel: TextChannelGroup,
     description: string = ""
   ) {
     super();
-    this.client = client;
     this.name = name;
     this.title = title;
     this.roles = roles;
@@ -35,13 +29,18 @@ export default class SelfRoleBaseSelector extends EventEmitter {
   }
 
   public async init() {
-    const message = await checkMessage(
-      this.name,
-      this.channel,
-      this.generateMessage()
-    );
-    this.addListners();
-    return message;
+    try {
+      const message = await checkMessage(
+        this.name,
+        this.channel,
+        this.generateMessage()
+      );
+      this.addListners();
+      return message;
+    } catch (error) {
+      log_error(error);
+      return null;
+    }
   }
 
   protected generateMessage() {

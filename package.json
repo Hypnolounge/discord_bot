@@ -1,8 +1,9 @@
 {
   "name": "discord_bot",
   "version": "1.0.0",
-  "description": "1. Use this to update the local docker image after updating:\r     docker build -t hypnolounge-bot .",
+  "description": "Official Discord bot for the server",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

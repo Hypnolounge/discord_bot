@@ -1,3 +1,5 @@
+import bindMessageReactionAdd from "@utils/events/messageReactionAdd";
+import bindMessageReactionRemove from "@utils/events/messageReactionRemove";
 import { EmbedBuilder } from "discord.js";
 import SelfRoleBaseSelector from "./baseSelector";
 
@@ -41,29 +43,26 @@ export default class SelfRoleSelectorMulti extends SelfRoleBaseSelector {
   }
 
   protected addListners() {
-    this.client.on("messageReactionAdd", async (reaction, user) => {
-      if (reaction.message.id !== this.messageID) return;
-      if (user.bot) return;
-
+    bindMessageReactionAdd(this.messageID, async (reaction, user) => {
       const role = this.getRoleByEmoji(reaction.emoji.name);
       if (!role) return;
 
       const member = await reaction.message.guild?.members.fetch(user.id);
       if (!member) return;
-      
+
       role.addUserRole(member);
       this.emit("roleSelected", role, member);
     });
 
-    this.client.on("messageReactionRemove", async (reaction, user) => {
-      if (reaction.message.id !== this.messageID) return;
-      if (user.bot) return;
-
+    bindMessageReactionRemove(this.messageID, async (reaction, user) => {
       const role = this.getRoleByEmoji(reaction.emoji.name);
       if (!role) return;
 
       const member = await reaction.message.guild?.members.fetch(user.id);
+      if (!member) return;
+
       role.removeUserRole(member);
+      this.emit("roleRemoved", role, member);
     });
   }
 }

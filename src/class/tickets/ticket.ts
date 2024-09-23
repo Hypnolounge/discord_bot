@@ -6,7 +6,8 @@ import {
   tickets_issue,
   tickets_misc,
 } from "@prisma/client";
-import { log_error } from "@utils/error";
+import { TextChannelGroup } from "@typings/TextChannelGroup";
+import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import getMember from "@utils/getMember";
 import getRole from "@utils/getRole";
 import Logger, { LogEntry, TicketLogger } from "@utils/Logger";
@@ -17,12 +18,10 @@ import {
   ButtonInteraction,
   ButtonStyle,
   ChannelType,
-  Client,
   EmbedBuilder,
   Guild,
   ModalBuilder,
   ModalSubmitInteraction,
-  TextBasedChannel,
   TextInputBuilder,
   TextInputStyle,
   User,
@@ -39,7 +38,6 @@ export class TicketCreator<
     | Prisma.tickets_issueDelegate
     | Prisma.tickets_miscDelegate
 > {
-  client: Client;
   type: string;
   categoryID: string;
   table: T;
@@ -58,14 +56,12 @@ export class TicketCreator<
   };
 
   constructor(
-    client: Client,
     type: string,
     categoryID: string,
     table: T,
     autoMessage: string[] = [],
     extraButtons: { [key: string]: ButtonBuilder } = {}
   ) {
-    this.client = client;
     this.type = type;
     this.categoryID = categoryID;
     this.table = table;
@@ -76,43 +72,81 @@ export class TicketCreator<
   }
 
   protected async addListeners() {
-    this.client.on("interactionCreate", async (interaction) => {
-      if (interaction.user.bot) return;
-      if (!interaction.isButton() && !interaction.isModalSubmit()) return;
-      if (!interaction.customId.startsWith(`close_${this.type}_ticket`)) return;
-
-      const split = interaction.customId.split("_");
-      const reason = split[split.length - 1];
-      const ticketID = parseInt(split[split.length - 2]);
-      const member = await getMember(interaction.user.id);
-
-      if (!member)
-        return await interaction.reply({
-          content: "Error getting member",
-          ephemeral: true,
-        });
-
-      if (reason !== "closed" && !member.roles.cache.has(config.roles.mod)) {
-        return await interaction.reply({
-          content: "Only a mod can use that.",
-          ephemeral: true,
-        });
-      }
-
-      if (interaction.isButton()) {
-        await interaction.showModal(
-          await this.getCloseModal(interaction.customId)
-        );
-      } else {
+    bindInteractionCreated(
+      "closeTicket",
+      "modal",
+      async (interaction, action) => {
         await interaction.deferReply({ ephemeral: true });
-        const { success, error } = await this.closeTicket(
-          ticketID,
-          reason,
-          interaction.fields.getField("message").value,
-          interaction
-        );
+
+        try {
+          const split = action.split("-");
+          const type = split[0];
+          if (type !== this.type) return;
+          const ticketID = parseInt(split[1]);
+          const reason = split[2];
+          const member = await getMember(interaction.user.id);
+
+          if (
+            reason !== "closed" &&
+            !member.roles.cache.has(config.roles.mod)
+          ) {
+            return await interaction.reply({
+              content: "Only a mod can use that.",
+              ephemeral: true,
+            });
+          }
+
+          await this.closeTicket(
+            ticketID,
+            reason,
+            interaction.fields.getField("message").value,
+            interaction
+          );
+        } catch (error) {
+          await interaction.followUp("Error closing ticket");
+          Logger.log({
+            title: "Error closing ticket",
+            message: "Error closing ticket",
+            type: "error",
+            error: error,
+          } as LogEntry);
+        }
       }
-    });
+    );
+
+    bindInteractionCreated(
+      "closeTicket",
+      "button",
+      async (interaction, action) => {
+        try {
+          const split = action.split("_");
+          const type = split[0];
+          if (type !== this.type) return;
+          const reason = split[2];
+          const member = await getMember(interaction.user.id);
+
+          if (
+            reason !== "closed" &&
+            !member.roles.cache.has(config.roles.mod)
+          ) {
+            return await interaction.reply({
+              content: "Only a mod can use that.",
+              ephemeral: true,
+            });
+          }
+
+          await interaction.showModal(await this.getCloseModal(action));
+        } catch (error) {
+          await interaction.reply("Error closing ticket");
+          Logger.log({
+            title: "Error closing ticket",
+            message: "Error closing ticket",
+            type: "error",
+            error,
+          } as LogEntry);
+        }
+      }
+    );
   }
 
   protected async getCloseModal(id: string) {
@@ -141,9 +175,7 @@ export class TicketCreator<
     try {
       await interaction.followUp("Closing ticket...");
 
-      const { result, error } = await this.closeDBTicket(ticketID, reason);
-
-      if (!result) return { success: false, error: error };
+      await this.closeDBTicket(ticketID, reason);
 
       const member = await getMember(interaction.user.id);
 
@@ -164,7 +196,8 @@ export class TicketCreator<
           },
           {
             name: "Reason",
-            value: this.reasonToMessage[reason] || this.reasonToMessage["closed"],
+            value:
+              this.reasonToMessage[reason] || this.reasonToMessage["closed"],
           },
         ]);
 
@@ -192,24 +225,19 @@ export class TicketCreator<
   }
 
   protected async closeDBTicket(ticketID: number, reason: string) {
-    try {
-      const result: tickets_application | tickets_issue | tickets_misc = await (
-        this.table as any
-      ).update({
-        where: {
-          id: ticketID,
-        },
-        data: {
-          closed: new Date().getTime(),
-          reason: reason,
-        },
-      });
+    const result: tickets_application | tickets_issue | tickets_misc = await (
+      this.table as any
+    ).update({
+      where: {
+        id: ticketID,
+      },
+      data: {
+        closed: new Date().getTime(),
+        reason: reason,
+      },
+    });
 
-      return { result, error: null };
-    } catch (error) {
-      log_error("Error updating ticket");
-      return { result: null, error };
-    }
+    return result;
   }
 
   public async createTicket(
@@ -340,7 +368,7 @@ export class TicketCreator<
   }
 
   protected async sendMessages(
-    channel: TextBasedChannel,
+    channel: TextChannelGroup,
     answers: TicketAnswer[],
     ticketID: number,
     member: User
@@ -367,7 +395,9 @@ export class TicketCreator<
     if (!modRole) return { success: false, error: "Mod role not found" };
 
     try {
-      const message = await channel.send(modRole.toString() + member.toString());
+      const message = await channel.send(
+        modRole.toString() + member.toString()
+      );
       await sleep(2000);
       await message.delete();
     } catch (error) {
@@ -400,20 +430,20 @@ export class TicketCreator<
   }
 
   protected getButtons(ticketID: number) {
-    const close = new ButtonBuilder()
-      .setCustomId(`close_${this.type}_ticket_${ticketID}_closed`)
-      .setLabel("Close")
-      .setStyle(ButtonStyle.Secondary);
-
     const row = new ActionRowBuilder<ButtonBuilder>();
 
     if (this.extraButtons) {
       Object.keys(this.extraButtons).forEach((key) => {
-        const id = `close_${this.type}_ticket_${ticketID}_${key}`;
+        const id = `closeTicket:${this.type}_${ticketID}_${key}`;
         const button = this.extraButtons[key].setCustomId(id);
         row.addComponents(button);
       });
     }
+
+    const close = new ButtonBuilder()
+      .setCustomId(`closeTicket:${this.type}_${ticketID}_closed`)
+      .setLabel("Close")
+      .setStyle(ButtonStyle.Secondary);
 
     row.addComponents(close);
 
