@@ -1,4 +1,4 @@
-import { TicketCreator } from "@class/tickets/ticket";
+import { CloseOptions, TicketCreator } from "@class/tickets/ticket";
 import TicketOpener from "@class/tickets/ticketOpener";
 import TicketQuestion from "@class/tickets/ticketQuestion";
 import config from "@db/config";
@@ -60,20 +60,48 @@ function generateMessage(types: TicketOpener[]) {
 }
 
 function ApplicationTicket() {
-  const extraButtons = {
-    approved: new ButtonBuilder()
-      .setLabel("Approve")
-      .setStyle(ButtonStyle.Success),
+  const closeOptions: CloseOptions = {
+    approved: {
+      button: new ButtonBuilder()
+        .setLabel("Approve")
+        .setStyle(ButtonStyle.Success),
+      message:
+        "Welcome! Head to https://discord.com/channels/1125008815272759408/1125014789450641458 and introduce yourself there. Then, you will be able to choose a role. Choose a primary role, then come and say hi in General!",
+      closeAction: async (member) => {
+        await member.roles.add(config.roles.member);
+      },
+    },
 
-    incomplete: new ButtonBuilder()
-      .setLabel("Incomplete")
-      .setStyle(ButtonStyle.Danger),
+    incomplete: {
+      button: new ButtonBuilder()
+        .setLabel("Incomplete")
+        .setStyle(ButtonStyle.Danger),
+      message:
+        "You have failed to read the rules properly and have missed a step in the application procedure that is clearly stated in the rules. Feel free to try again, but we are denying you for now. (https://discord.gg/Caz6NHR2Zu)",
+    },
 
-    denied: new ButtonBuilder().setLabel("Deny").setStyle(ButtonStyle.Danger),
+    denied: {
+      button: new ButtonBuilder().setLabel("Deny").setStyle(ButtonStyle.Danger),
+      message:
+        "You haven't convinced us that you would be a good fit in the Hypnolounge. We want our members to be able to contribute to a friendly community by being themselves and not just random horny strangers on the internet. The Hypnolounge is a place of discussion and rapport, not a place for random hookups like Grindr. There is another server, Hypnosis for Guys, where they would rather just get on with the hypnosis and do nothing else. We think you would be a much better fit there: https://hypnosisforguys.com/",
+      closeAction: async (member) => {
+        await member.ban({ reason: "Denied application" });
+      },
+    },
 
-    expired: new ButtonBuilder()
-      .setLabel("Expired")
-      .setStyle(ButtonStyle.Primary),
+    expired: {
+      button: new ButtonBuilder()
+        .setLabel("Expired")
+        .setStyle(ButtonStyle.Primary),
+      message:
+        "You have taken longer than three days to finish your application. Feel free to try again, but we are denying you for now. (https://discord.gg/Caz6NHR2Zu)",
+    },
+    closed: {
+      button: new ButtonBuilder()
+        .setLabel("Close")
+        .setStyle(ButtonStyle.Secondary),
+      message: "The ticket has been closed.",
+    },
   };
 
   return new TicketOpener(
@@ -105,7 +133,7 @@ function ApplicationTicket() {
       config.categories.applications,
       prisma.tickets_application,
       ticketAutoMessage,
-      extraButtons
+      closeOptions
     )
   );
 }

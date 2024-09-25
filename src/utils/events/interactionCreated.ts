@@ -9,7 +9,7 @@ import {
 type InteractionTypes = "button" | "modal" | "command" | "stringSelect";
 
 interface Callback<T> {
-  (interaction: T, action: string): any;
+  (interaction: T, action: string, customId?:string): any;
 }
 
 interface Register {
@@ -37,7 +37,7 @@ export function initializeInteractionCreated() {
       const [scope, action] = interaction.customId.split(":", 2);
       const handler = actions.stringSelect[scope];
       if (!handler) return;
-      handler(interaction, action);
+      handler(interaction, action, interaction.customId);
     }
 
     if (interaction.isButton()) {
@@ -45,14 +45,14 @@ export function initializeInteractionCreated() {
       const handler = actions.button[scope];
       if (!handler) return;
       
-      handler(interaction, action);
+      handler(interaction, action, interaction.customId);
     }
 
     if (interaction.isModalSubmit()) {
       const [scope, action] = interaction.customId.split(":", 2);
       const handler = actions.modal[scope];
       if (!handler) return;
-      handler(interaction, action);
+      handler(interaction, action, interaction.customId);
     }
   });
 }

@@ -1,4 +1,6 @@
+import { TicketAnswer, TicketCreator } from "@class/tickets/ticket";
 import config from "@db/config";
+import { Prisma } from "@prisma/client";
 import { log_error } from "@utils/error";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import getChannel from "@utils/getChannel";
@@ -61,13 +63,57 @@ const actions: { [key: string]: ModalData[] } = {
   ],
 };
 
+const StrikeTicket = new TicketCreator<Prisma.tickets_issueDelegate>(
+  "strike",
+  config.categories.issues,
+  prisma.tickets_issue,
+  undefined,
+  {
+    applied: {
+      button: new ButtonBuilder()
+        .setLabel("Apply")
+        .setStyle(ButtonStyle.Danger),
+      message: "The strike has been applied.",
+      closeAction: async (member, message) => {
+        try {
+          await prisma.strikes.create({
+            data: {
+              userID: parseInt(member.id),
+              reason: message,
+            },
+          });
+
+          const strikeCount = await prisma.strikes.count({
+            where: { userID: parseInt(member.id) },
+          });
+
+          if (strikeCount === 3) {
+            await member.send(
+              "You have 3 strikes. You are banned from the server"
+            );
+            await member.ban({ reason: "3 strikes" });
+          }
+        } catch (e) {
+          log_error(e);
+        }
+      },
+    },
+    dropped: {
+      button: new ButtonBuilder()
+        .setLabel("Drop")
+        .setStyle(ButtonStyle.Secondary),
+      message: "The strike has been dropped.",
+    },
+  }
+);
+
 const scope = "strike";
 
 export default async function Strikes() {
   try {
     const channel = await getChannel(config.channels.strikes);
 
-    const message = await checkMessage("strikes", channel, generateMessage());
+    await checkMessage("strikes", channel, generateMessage());
 
     addListeners();
   } catch (error) {
@@ -112,7 +158,6 @@ function addListeners() {
   });
 
   bindInteractionCreated(scope, "modal", async (interaction, action) => {
-    await interaction.deferReply({ ephemeral: true });
 
     const data: { [key: string]: string } = {};
 
@@ -120,7 +165,7 @@ function addListeners() {
       const value = interaction.fields.getField(input.id).value;
       data[input.id] = value;
     });
-    console.log(data);
+
     switch (action) {
       case "give":
         await giveStrike(data, interaction);
@@ -142,29 +187,15 @@ async function giveStrike(
   interaction: ModalSubmitInteraction
 ) {
   try {
-    const user = await getMember(data.user);
-    const strike = await prisma.strikes.create({
-      data: {
-        userID: parseInt(user.id),
-        reason: data.reason,
-      },
-    });
-
-    await interaction.followUp(
-      `Strike added to ${user.displayName} with ID ${strike.id}`
-    );
-
-    const strikeCount = await prisma.strikes.count({
-      where: { userID: parseInt(user.id) },
-    });
-
-    if (strikeCount === 3) {
-      await user.send("You have 3 strikes. You are banned from the server");
-      await user.ban({ reason: "3 strikes" });
-    }
+    const member = await getMember(data.user);
+    const reason:TicketAnswer = {
+      question: "Reason",
+      answer: data.reason
+    };
+    await StrikeTicket.createTicket(interaction, [reason], member);
   } catch (e) {
     log_error(e);
-    return await interaction.followUp("Failed to add strike \n" + e);
+    return await interaction.reply("Failed to open strike ticket \n" + e);
   }
 }
 
@@ -173,6 +204,7 @@ async function viewStrike(
   interaction: ModalSubmitInteraction
 ) {
   try {
+    await interaction.deferReply();
     const user = await getMember(data.user);
 
     const strikes = await prisma.strikes.findMany({
@@ -213,6 +245,8 @@ async function deleteStrike(
   interaction: ModalSubmitInteraction
 ) {
   try {
+    await interaction.deferReply();
+
     const user = await getMember(data.user);
     const strike = await prisma.strikes.delete({
       where: { id: parseInt(data.strike_id), userID: parseInt(user.id) },

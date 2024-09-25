@@ -20,8 +20,10 @@ import {
   ChannelType,
   EmbedBuilder,
   Guild,
+  GuildMember,
   ModalBuilder,
   ModalSubmitInteraction,
+  PermissionResolvable,
   TextInputBuilder,
   TextInputStyle,
   User,
@@ -31,6 +33,24 @@ export interface TicketAnswer {
   question: string;
   answer: string;
 }
+
+export interface CloseOptions {
+  [key: string]: {
+    button: ButtonBuilder;
+    message: string;
+    closeAction?: (member: GuildMember, message: string) => Promise<any>;
+  };
+}
+
+const defaultButtons = {
+  closed: {
+    button: new ButtonBuilder()
+      .setCustomId("closeTicket")
+      .setLabel("Close")
+      .setStyle(ButtonStyle.Danger),
+    message: "The ticket has been closed.",
+  },
+};
 
 export class TicketCreator<
   T extends
@@ -42,31 +62,20 @@ export class TicketCreator<
   categoryID: string;
   table: T;
   autoMessage: string[];
-  extraButtons: { [key: string]: ButtonBuilder };
-  reasonToMessage: { [key: string]: string } = {
-    approved:
-      "Welcome! Head to https://discord.com/channels/1125008815272759408/1125014789450641458 and introduce yourself there. Then, you will be able to choose a role. Choose a primary role, then come and say hi in General!",
-    incomplete:
-      "You have failed to read the rules properly and have missed a step in the application procedure that is clearly stated in the rules. Feel free to try again, but we are denying you for now. (https://discord.gg/Caz6NHR2Zu)",
-    denied:
-      "You haven't convinced us that you would be a good fit in the Hypnolounge. We want our members to be able to contribute to a friendly community by being themselves and not just random horny strangers on the internet. The Hypnolounge is a place of discussion and rapport, not a place for random hookups like Grindr. There is another server, Hypnosis for Guys, where they would rather just get on with the hypnosis and do nothing else. We think you would be a much better fit there: https://hypnosisforguys.com/",
-    expired:
-      "You have taken longer than three days to finish your application. Feel free to try again, but we are denying you for now. (https://discord.gg/Caz6NHR2Zu)",
-    closed: "The ticket has been closed.",
-  };
+  closeOptions: CloseOptions;
 
   constructor(
     type: string,
     categoryID: string,
     table: T,
     autoMessage: string[] = [],
-    extraButtons: { [key: string]: ButtonBuilder } = {}
+    closeOptions: CloseOptions = defaultButtons
   ) {
     this.type = type;
     this.categoryID = categoryID;
     this.table = table;
     this.autoMessage = autoMessage;
-    this.extraButtons = extraButtons;
+    this.closeOptions = closeOptions;
 
     this.addListeners();
   }
@@ -77,9 +86,8 @@ export class TicketCreator<
       "modal",
       async (interaction, action) => {
         await interaction.deferReply({ ephemeral: true });
-
         try {
-          const split = action.split("-");
+          const split = action.split("_");
           const type = split[0];
           if (type !== this.type) return;
           const ticketID = parseInt(split[1]);
@@ -117,7 +125,7 @@ export class TicketCreator<
     bindInteractionCreated(
       "closeTicket",
       "button",
-      async (interaction, action) => {
+      async (interaction, action, customId) => {
         try {
           const split = action.split("_");
           const type = split[0];
@@ -135,7 +143,7 @@ export class TicketCreator<
             });
           }
 
-          await interaction.showModal(await this.getCloseModal(action));
+          await interaction.showModal(await this.getCloseModal(customId || ""));
         } catch (error) {
           await interaction.reply("Error closing ticket");
           Logger.log({
@@ -175,9 +183,9 @@ export class TicketCreator<
     try {
       await interaction.followUp("Closing ticket...");
 
-      await this.closeDBTicket(ticketID, reason);
+      const ticket = await this.closeDBTicket(ticketID, reason);
 
-      const member = await getMember(interaction.user.id);
+      const member = await getMember(ticket.userID.toString());
 
       const memberPing = member
         ? `${member.toString()} (${member.displayName})`
@@ -196,8 +204,7 @@ export class TicketCreator<
           },
           {
             name: "Reason",
-            value:
-              this.reasonToMessage[reason] || this.reasonToMessage["closed"],
+            value: this.closeOptions[reason].message,
           },
         ]);
 
@@ -209,15 +216,7 @@ export class TicketCreator<
 
       await interaction.channel?.delete();
 
-      switch (reason) {
-        case "approved":
-          await member?.roles.add(config.roles.accepted);
-          break;
-        case "denied":
-          await member?.ban({ reason: "Denied application" });
-        default:
-          break;
-      }
+      await this.closeOptions[reason].closeAction?.(member, message);
     } catch (error) {
       return { success: false, error };
     }
@@ -242,16 +241,22 @@ export class TicketCreator<
 
   public async createTicket(
     interaction: ModalSubmitInteraction | ButtonInteraction,
-    answers: TicketAnswer[]
+    answers: TicketAnswer[],
+    overwriteMember?: GuildMember,
+    addUsers: string[] = []
   ) {
     await interaction.deferReply({ ephemeral: true });
 
     if (!interaction.guild)
       return await this.handleCreationError(interaction, "Guild not found");
 
-    const { ticket, error: error1 } = await this.insertDBTicket(
-      interaction.user.id
-    );
+    if (!interaction.member || !(interaction.member instanceof GuildMember))
+      return await this.handleCreationError(interaction, "Member not found");
+
+    let member = interaction.member;
+    if (overwriteMember) member = overwriteMember;
+
+    const { ticket, error: error1 } = await this.insertDBTicket(member.id);
     if (!ticket)
       return await this.handleCreationError(
         interaction,
@@ -262,7 +267,8 @@ export class TicketCreator<
     const { channel, error: error2 } = await this.createChannel(
       interaction.guild,
       ticket.id,
-      interaction.user
+      member,
+      addUsers
     );
     if (!channel)
       return await this.handleCreationError(
@@ -286,7 +292,7 @@ export class TicketCreator<
       channel,
       answers,
       ticket.id,
-      interaction.user
+      member.user
     );
 
     if (!success)
@@ -320,27 +326,41 @@ export class TicketCreator<
     }
   }
 
-  public async createChannel(guild: Guild, ticketID: number, user: User) {
+  public async createChannel(
+    guild: Guild,
+    ticketID: number,
+    member: GuildMember,
+    addUsers: string[] = []
+  ) {
     try {
+      const permissionOverwrites = [
+        {
+          id: guild.roles.everyone.id,
+          deny: ["ViewChannel"] as PermissionResolvable,
+        },
+        {
+          id: config.roles.mod,
+          allow: ["ViewChannel"] as PermissionResolvable,
+        },
+        {
+          id: member.id,
+          allow: ["ViewChannel", "SendMessages"] as PermissionResolvable,
+        },
+      ];
+
+      addUsers.forEach((id) => {
+        permissionOverwrites.push({
+          id: id,
+          allow: ["ViewChannel", "SendMessages"],
+        });
+      });
+
       const channel = await guild.channels.create({
-        name: `${this.type}-${ticketID}-${user.displayName}`,
+        name: `${this.type}-${ticketID}-${member.displayName}`,
         type: ChannelType.GuildText,
         parent: this.categoryID,
-        reason: `Create ${this.type} ticket for ${user.username}`,
-        permissionOverwrites: [
-          {
-            id: user.id,
-            allow: ["ViewChannel", "SendMessages"],
-          },
-          {
-            id: guild.roles.everyone,
-            deny: ["ViewChannel"],
-          },
-          {
-            id: config.roles.mod,
-            allow: ["ViewChannel"],
-          },
-        ],
+        reason: `Create ${this.type} ticket for ${member.displayName}`,
+        permissionOverwrites: permissionOverwrites,
       });
 
       return { channel };
@@ -371,9 +391,9 @@ export class TicketCreator<
     channel: TextChannelGroup,
     answers: TicketAnswer[],
     ticketID: number,
-    member: User
+    user: User
   ) {
-    const embed = await this.getAnswers(answers, member.id);
+    const embed = await this.getAnswers(answers, user.id);
     const buttons = this.getButtons(ticketID);
 
     try {
@@ -395,9 +415,7 @@ export class TicketCreator<
     if (!modRole) return { success: false, error: "Mod role not found" };
 
     try {
-      const message = await channel.send(
-        modRole.toString() + member.toString()
-      );
+      const message = await channel.send(modRole.toString() + user.toString());
       await sleep(2000);
       await message.delete();
     } catch (error) {
@@ -408,8 +426,9 @@ export class TicketCreator<
   }
 
   protected async getAnswers(answers: TicketAnswer[], memberID: string) {
+    const title = this.type.charAt(0).toUpperCase() + this.type.slice(1) + " Ticket";
     const embed = new EmbedBuilder()
-      .setTitle(this.type)
+      .setTitle(title)
       .setColor("Blurple")
       .setFooter({ text: "PupNicky" });
 
@@ -432,20 +451,11 @@ export class TicketCreator<
   protected getButtons(ticketID: number) {
     const row = new ActionRowBuilder<ButtonBuilder>();
 
-    if (this.extraButtons) {
-      Object.keys(this.extraButtons).forEach((key) => {
-        const id = `closeTicket:${this.type}_${ticketID}_${key}`;
-        const button = this.extraButtons[key].setCustomId(id);
-        row.addComponents(button);
-      });
-    }
-
-    const close = new ButtonBuilder()
-      .setCustomId(`closeTicket:${this.type}_${ticketID}_closed`)
-      .setLabel("Close")
-      .setStyle(ButtonStyle.Secondary);
-
-    row.addComponents(close);
+    Object.keys(this.closeOptions).forEach((key) => {
+      const id = `closeTicket:${this.type}_${ticketID}_${key}`;
+      const button = this.closeOptions[key].button.setCustomId(id);
+      row.addComponents(button);
+    });
 
     return row;
   }
