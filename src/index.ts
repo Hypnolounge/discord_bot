@@ -7,6 +7,7 @@ import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
 import SelfRoles from "./self_roles";
 import Strikes from "./strikes";
+import DidSession from "./didSession";
 
 // Load environment variables from .env file
 dotenv();
@@ -48,6 +49,7 @@ bot.on("ready", () => {
   //Announcements();
   //Tickets();
   Strikes();
+  DidSession();
 });
 
 function init() {

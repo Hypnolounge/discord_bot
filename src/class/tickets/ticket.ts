@@ -34,7 +34,7 @@ export interface TicketAnswer {
   answer: string;
 }
 
-export interface CloseOptions {
+interface CloseOptions {
   [key: string]: {
     button: ButtonBuilder;
     message: string;
@@ -453,7 +453,7 @@ export class TicketCreator<
 
     Object.keys(this.closeOptions).forEach((key) => {
       const id = `closeTicket:${this.type}_${ticketID}_${key}`;
-      const button = this.closeOptions[key].button.setCustomId(id);
+      const button = ButtonBuilder.from(this.closeOptions[key].button.toJSON()).setCustomId(id);
       row.addComponents(button);
     });
 

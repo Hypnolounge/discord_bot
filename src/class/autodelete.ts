@@ -1,9 +1,8 @@
 import bindMessageCreated from "@utils/events/messageCreated";
 import formatString from "@utils/formatString";
 import { Message } from "discord.js";
-import { EventEmitter } from "events";
+import EventEmitter from "node:events";
 import { TextChannelGroup } from "src/typings/TextChannelGroup";
-
 
 export default class AutoDelete extends EventEmitter {
   channel: TextChannelGroup;
