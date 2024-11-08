@@ -1,7 +1,7 @@
 import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { log_error } from "@utils/error";
 import { MessageCreateOptions } from "discord.js";
-import { setKeyValue } from "src/db/keyValueStore";
+import { setKeyValue } from "@db/keyValueStore";
 
 export default async function createMessage(
   name: string,

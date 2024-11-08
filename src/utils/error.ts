@@ -1,7 +1,7 @@
 
 export function log_error(message: any) {
   const current = getCurrentFormatedTime();
-  console.error(current + message);
+  console.error(current, message);
 }
 
 function getCurrentFormatedTime(): string {
@@ -13,5 +13,5 @@ function getCurrentFormatedTime(): string {
   const day = now.getDate().toString().padStart(2, "0");
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
 
-  return `[${day}.${month}|${hours}:${minutes}:${seconds}] `;
+  return `[${day}.${month}|${hours}:${minutes}:${seconds}]`;
 }

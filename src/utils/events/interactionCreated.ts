@@ -9,7 +9,7 @@ import {
 type InteractionTypes = "button" | "modal" | "command" | "stringSelect";
 
 interface Callback<T> {
-  (interaction: T, action: string, customId?:string): any;
+  (interaction: T, action: string, customId:string): any;
 }
 
 interface Register {
@@ -30,7 +30,7 @@ export function initializeInteractionCreated() {
     if (interaction.isCommand()) {
       const handler = actions.command[interaction.commandName];
       if (!handler) return;
-      handler(interaction, interaction.commandName);
+      handler(interaction, interaction.commandName, "");
     }
 
     if (interaction.isStringSelectMenu()) {

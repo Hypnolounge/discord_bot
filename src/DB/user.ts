@@ -44,7 +44,7 @@ export async function getPrevApplications(memberID: string) {
       where: {
         userID: parseInt(memberID),
         reason: {
-          not: undefined || "",
+          not: "",
         },
       },
       _count: {

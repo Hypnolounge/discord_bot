@@ -16,7 +16,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import prisma from "./db";
+import prisma from "@db/index";
 
 interface ModalData {
   id: string;

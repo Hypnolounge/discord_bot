@@ -34,7 +34,7 @@ export interface TicketAnswer {
   answer: string;
 }
 
-interface CloseOptions {
+export interface CloseOptions {
   [key: string]: {
     button: ButtonBuilder;
     message: string;
@@ -143,7 +143,7 @@ export class TicketCreator<
             });
           }
 
-          await interaction.showModal(await this.getCloseModal(customId || ""));
+          await interaction.showModal(await this.getCloseModal(customId));
         } catch (error) {
           await interaction.reply("Error closing ticket");
           Logger.log({

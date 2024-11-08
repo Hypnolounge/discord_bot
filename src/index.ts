@@ -5,9 +5,9 @@ import { initializeMessageReactionRemove } from "@utils/events/messageReactionRe
 import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
-import SelfRoles from "./self_roles";
-import Strikes from "./strikes";
-import DidSession from "./didSession";
+import SelfRoles from "@components/self_roles";
+import Strikes from "@components/strikes";
+import DidSession from "./components/didSession";
 
 // Load environment variables from .env file
 dotenv();
@@ -44,11 +44,11 @@ bot.on("ready", () => {
   Logger.init();
   TicketLogger.init();
 
-  SelfRoles();
+  //SelfRoles();
   //AutoDeletes();
   //Announcements();
   //Tickets();
-  Strikes();
+  //Strikes();
   DidSession();
 });
 

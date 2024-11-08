@@ -13,7 +13,7 @@ import {
   EmbedBuilder,
   TextInputStyle,
 } from "discord.js";
-import prisma from "./db";
+import prisma from "@db/index";
 
 const ticketAutoMessage = [
   "Welcome to the Hypnolounge! We're sure you're excited to enter and do all the horny things you'd like to do, but before anything, please answer these questions.",

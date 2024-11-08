@@ -16,6 +16,7 @@
       "@class/*": ["src/class/*"],
       "@db/*": ["src/db/*"],
       "@typings/*": ["src/typings/*"],
+      "@components/*": ["src/components/*"],
       "@bot": ["src/index.ts"]
     }
   },

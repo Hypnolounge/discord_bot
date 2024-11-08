@@ -1,9 +1,9 @@
 import { updateUser } from "@db/user";
 import { Message } from "discord.js";
-import AutoDelete from "./class/autodelete";
-import config from "./db/config";
-import { log_error } from "./utils/error";
-import getChannel from "./utils/getChannel";
+import AutoDelete from "../class/autodelete";
+import config from "../db/config";
+import { log_error } from "../utils/error";
+import getChannel from "../utils/getChannel";
 
 export default function AutoDeletes() {
   IntroAutoDelete();

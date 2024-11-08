@@ -1,12 +1,12 @@
 import { updateUser } from "@db/user";
 import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { GuildMember } from "discord.js";
-import SelfRoleSelectorMulti from "./class/roles/multiSelector";
-import { SelfRole, SelfRoleCorrelation } from "./class/roles/selfrole";
-import SelfRoleSelectorSingle from "./class/roles/singleSelector";
-import config from "./db/config";
-import { log_error } from "./utils/error";
-import getChannel from "./utils/getChannel";
+import SelfRoleSelectorMulti from "@class/roles/multiSelector";
+import { SelfRole, SelfRoleCorrelation } from "@class/roles/selfrole";
+import SelfRoleSelectorSingle from "@class/roles/singleSelector";
+import config from "@db/config";
+import { log_error } from "@utils/error";
+import getChannel from "@utils/getChannel";
 
 let channel: TextChannelGroup;
 

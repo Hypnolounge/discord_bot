@@ -1,3 +1,4 @@
+import { addCompliment, addSession } from "@db/session";
 import config from "@db/config";
 import { log_error } from "@utils/error";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
@@ -12,6 +13,7 @@ import {
   GuildMember,
   ModalBuilder,
   TextInputBuilder,
+  TextInputStyle,
 } from "discord.js";
 
 const scope = "didSession";
@@ -57,7 +59,7 @@ async function createMessage() {
   try {
     const channel = await getChannel(config.channels.session_counter);
 
-    const message = await checkMessage("", channel, getMessage());
+    const message = await checkMessage("didSession", channel, getMessage());
 
     addListeners();
   } catch (e) {
@@ -71,7 +73,8 @@ function getMessage() {
     .setDescription(
       "Click the button of the type of session you had. This helps us keep track of server activity. You do not need to add a name and compliment. Thanks!"
     )
-    .setFooter({ text: "PupNicky" });
+    .setFooter({ text: "PupNicky" })
+    .setColor("Blurple");
 
   const component = new ActionRowBuilder<ButtonBuilder>();
   Object.keys(options).forEach((key) => {
@@ -90,30 +93,44 @@ function addListeners() {
     scope,
     "button",
     async (interaction, action, customId) => {
-      if (!customId) return;
       await interaction.showModal(getModal(customId));
     }
   );
 
   bindInteractionCreated(scope, "modal", async (interaction, action) => {
     await interaction.deferReply({ ephemeral: true });
-    const userID = interaction.fields.getField("user").value;
+    const user = interaction.fields.getField("user").value;
     const compliment = interaction.fields.getField("compliment").value;
-    try{
-      const channel = await getChannel(config.channels.session_counter);
-      const complimented = await getMember(userID);
-      const member = await getMember(interaction.user.id);
-      const message = getComplimentMessage(member, complimented, compliment);
+    try {
+      if (user) {
+        const channel = await getChannel(config.channels.session_counter);
+        const complimented = await getMember(user);
+        const member = await getMember(interaction.user.id);
+        const message = getComplimentMessage(member, complimented, compliment);
 
-      await channel.send(message);
+        await channel.send(message);
+        await addCompliment(member.id, complimented.id, compliment)
+      }
+      await addSession(interaction.user.id, action);
+      await interaction.followUp({
+        content: "Your session has been added successfully, and if all the necessary information was provided, the compliment has been added as well!",
+        ephemeral: true
+      })
     } catch (e) {
-      await interaction.reply({content: "Couldn't add compliment\n" + e, ephemeral: true});
+      await interaction.followUp({
+        content: "Couldn't add compliment\n" + e,
+        ephemeral: true,
+      });
       return;
     }
   });
 }
 
-function getComplimentMessage(member: GuildMember, complimented:GuildMember, compliment: string) {
+function getComplimentMessage(
+  member: GuildMember,
+  complimented: GuildMember,
+  compliment: string
+) {
   let message = `${member.toString()} did a session with ${complimented.toString()}`;
   if (compliment) {
     message += `\n> ${compliment}`;
@@ -129,7 +146,8 @@ function getModal(id: string) {
   const userInput = new TextInputBuilder()
     .setLabel("User (ID, Name or display name)")
     .setCustomId("user")
-    .setRequired(true);
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
   const user = new ActionRowBuilder<TextInputBuilder>().addComponents(
     userInput
   );
@@ -137,6 +155,9 @@ function getModal(id: string) {
   const complimentInput = new TextInputBuilder()
     .setLabel("Compliment")
     .setCustomId("compliment")
+    .setStyle(TextInputStyle.Paragraph)
+    .setMaxLength(150)
+    .setRequired(false);
   const compliment = new ActionRowBuilder<TextInputBuilder>().addComponents(
     complimentInput
   );
