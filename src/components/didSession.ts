@@ -133,7 +133,7 @@ function getComplimentMessage(
 ) {
   let message = `${member.toString()} did a session with ${complimented.toString()}`;
   if (compliment) {
-    message += `\n> ${compliment}`;
+    message += `\n\n>>> ${compliment}`;
   }
   return message;
 }

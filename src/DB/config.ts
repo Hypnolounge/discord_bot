@@ -20,6 +20,7 @@ const config = {
     looking_for_sub: "1125080015210557492",
     system_log: "1125070879525715978",
     ticket_log: "1125812635141669005",
+    info_centre: "1158521239174918195",
   },
   roles: {
     mod: "1125012454699704373",
@@ -173,6 +174,7 @@ function getConfig() {
       looking_for_sub: "1248249254569443399",
       system_log: config.channels.system_log,
       ticket_log: config.channels.ticket_log,
+      info_centre: "1248249254569443399",
     };
   } else {
     console.log("Running in production mode");
