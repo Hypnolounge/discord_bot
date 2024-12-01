@@ -25,6 +25,7 @@ const actions = {
 
 export function initializeInteractionCreated() {
   bot.on("interactionCreate", async (interaction) => {
+    if (interaction.guildId !== process.env.GUILD_ID) return;
     if (interaction.user.bot) return;
 
     if (interaction.isCommand()) {

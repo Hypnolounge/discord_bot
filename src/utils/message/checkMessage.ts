@@ -1,7 +1,7 @@
 import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { ActionRowBuilder, EmbedBuilder } from "discord.js";
 import createMessage from "./createMessage";
-import getMessage from "./getMessage";
+import getChannelMessage from "./getChannelMessage";
 import updateMessage from "./updateMessage";
 
 export interface MessageOptions {
@@ -16,7 +16,7 @@ export default async function checkMessage(
   options: MessageOptions
 ) {
   try {
-    const oldMessage = await getMessage(name, channel);
+    const oldMessage = await getChannelMessage(name, channel);
     return await updateMessage(oldMessage, options);
   } catch {
     return await createMessage(name, channel, options);

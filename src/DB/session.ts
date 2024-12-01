@@ -9,8 +9,8 @@ export async function addCompliment(
 ) {
   await prisma.compliments.create({
     data: {
-      give: parseInt(userID),
-      receive: parseInt(other),
+      give: userID,
+      receive: other,
       comment: comment,
     },
   });
@@ -23,7 +23,7 @@ export async function addSession(
   await prisma.sessions.create(
     {
       data: {
-        userID: parseInt(userID),
+        userID: userID,
         medium: type,
         date: ((new Date().getTime()) / 1000)
       }

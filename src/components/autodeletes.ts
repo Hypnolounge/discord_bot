@@ -1,4 +1,4 @@
-import { updateUser } from "@db/user";
+import { setIntro, updateUser } from "@db/user";
 import { Message } from "discord.js";
 import AutoDelete from "../class/autodelete";
 import config from "../db/config";
@@ -31,6 +31,7 @@ async function IntroAutoDelete() {
       if (!message.member) return;
       await message.member.roles.add(config.roles.member);
       updateUser(message.member);
+      setIntro(message.author.id, message);
     });
   } catch (error) {
     log_error(error);

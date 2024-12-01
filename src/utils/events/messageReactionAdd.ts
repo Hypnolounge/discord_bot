@@ -17,6 +17,7 @@ const register: { [key: string]: Callback } = {};
 
 export function initializeMessageReactionAdd() {
   bot.on("messageReactionAdd", async (reaction, user) => {
+    if (reaction.message.guildId !== process.env.GUILD_ID) return;
     if (user.bot) return;
     if (reaction.message.channel.isThread()) return;
 

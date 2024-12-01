@@ -1,5 +1,6 @@
 import { TicketAnswer, TicketCreator } from "@class/tickets/ticket";
 import config from "@db/config";
+import prisma from "@db/index";
 import { Prisma } from "@prisma/client";
 import { log_error } from "@utils/error";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
@@ -16,7 +17,6 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import prisma from "@db/index";
 
 interface ModalData {
   id: string;
@@ -78,13 +78,13 @@ const StrikeTicket = new TicketCreator<Prisma.tickets_issueDelegate>(
         try {
           await prisma.strikes.create({
             data: {
-              userID: parseInt(member.id),
+              userID: parseFloat(member.id),
               reason: message,
             },
           });
 
           const strikeCount = await prisma.strikes.count({
-            where: { userID: parseInt(member.id) },
+            where: { userID: parseFloat(member.id) },
           });
 
           if (strikeCount === 3) {
@@ -208,7 +208,7 @@ async function viewStrike(
     const user = await getMember(data.user);
 
     const strikes = await prisma.strikes.findMany({
-      where: { userID: parseInt(user.id) },
+      where: { userID: parseFloat(user.id) },
     });
 
     if (strikes.length === 0) {
@@ -249,7 +249,7 @@ async function deleteStrike(
 
     const user = await getMember(data.user);
     const strike = await prisma.strikes.delete({
-      where: { id: parseInt(data.strike_id), userID: parseInt(user.id) },
+      where: { id: parseInt(data.strike_id), userID: parseFloat(user.id) },
     });
 
     await interaction.followUp(

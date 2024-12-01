@@ -1,3 +1,8 @@
+import DidSession from "@components/didSession";
+import InfoCenter from "@components/infoCenter";
+import SelfRoles from "@components/self_roles";
+import Strikes from "@components/strikes";
+import Tickets from "@components/tickets";
 import { initializeInteractionCreated } from "@utils/events/interactionCreated";
 import { initializeMessageCreated } from "@utils/events/messageCreated";
 import { initializeMessageReactionAdd } from "@utils/events/messageReactionAdd";
@@ -5,9 +10,6 @@ import { initializeMessageReactionRemove } from "@utils/events/messageReactionRe
 import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
-import SelfRoles from "@components/self_roles";
-import Strikes from "@components/strikes";
-import DidSession from "./components/didSession";
 
 // Load environment variables from .env file
 dotenv();
@@ -44,12 +46,13 @@ bot.on("ready", () => {
   Logger.init();
   TicketLogger.init();
 
-  //SelfRoles();
+  SelfRoles();
   //AutoDeletes();
   //Announcements();
-  //Tickets();
-  //Strikes();
+  Tickets();
+  Strikes();
   DidSession();
+  InfoCenter();
 });
 
 function init() {

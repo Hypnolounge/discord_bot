@@ -17,6 +17,7 @@ const register: { [key: string]: Callback } = {};
 
 export function initializeMessageReactionRemove() {
   bot.on("messageReactionRemove", async (reaction, user) => {
+    if (reaction.message.guildId !== process.env.GUILD_ID) return;
     if (user.bot) return;
     if (reaction.message.channel.isThread()) return;
 

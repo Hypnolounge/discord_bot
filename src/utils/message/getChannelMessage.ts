@@ -2,7 +2,7 @@ import { getKeyValue } from "@db/keyValueStore";
 import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { log_error } from "@utils/error";
 
-export default async function getMessage(
+export default async function getChannelMessage(
   name: string,
   channel: TextChannelGroup
 ) {

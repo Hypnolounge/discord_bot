@@ -9,6 +9,7 @@ const register: { [key: string]: Callback } = {};
 
 export function initializeMessageCreated() {
   bot.on("messageCreate", async (message: Message) => {
+    if (message.guildId !== process.env.GUILD_ID) return;
     if (message.author.bot) return;
     if (message.channel.isThread()) return;
 

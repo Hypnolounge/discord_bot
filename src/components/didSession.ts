@@ -1,7 +1,9 @@
-import { addCompliment, addSession } from "@db/session";
 import config from "@db/config";
+import { addCompliment, addSession } from "@db/session";
+import { getPrimaryRole } from "@db/user";
 import { log_error } from "@utils/error";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
+import { findClosestString } from "@utils/findClosestString";
 import getChannel from "@utils/getChannel";
 import getMember from "@utils/getMember";
 import checkMessage from "@utils/message/checkMessage";
@@ -49,6 +51,12 @@ const options: Options = {
       .setEmoji("👬")
       .setStyle(ButtonStyle.Primary),
   },
+};
+
+const roleOpposite: { [key: string]: string } = {
+  hypnotist: "subject",
+  subject: "hypnotist",
+  switch: "switch",
 };
 
 export default async function DidSession() {
@@ -101,21 +109,33 @@ function addListeners() {
     await interaction.deferReply({ ephemeral: true });
     const user = interaction.fields.getField("user").value;
     const compliment = interaction.fields.getField("compliment").value;
+    const roleInput = interaction.fields.getField("role").value.toLowerCase();
     try {
       if (user) {
         const channel = await getChannel(config.channels.session_counter);
         const complimented = await getMember(user);
         const member = await getMember(interaction.user.id);
-        const message = getComplimentMessage(member, complimented, compliment);
-
+        let memberRole = await getPrimaryRole(interaction.user.id);
+        if (roleInput.length > 0) {
+          memberRole = findClosestString(roleInput, Object.keys(roleOpposite));
+        }
+        const complimentedRole = roleOpposite[memberRole];
+        const message = getComplimentMessage(
+          member,
+          memberRole,
+          complimented,
+          complimentedRole,
+          compliment
+        );
         await channel.send(message);
-        await addCompliment(member.id, complimented.id, compliment)
+        await addCompliment(member.id, complimented.id, compliment);
       }
       await addSession(interaction.user.id, action);
       await interaction.followUp({
-        content: "Your session has been added successfully, and if all the necessary information was provided, the compliment has been added as well!",
-        ephemeral: true
-      })
+        content:
+          "Your session has been added successfully, and if all the necessary information was provided, the compliment has been added as well!",
+        ephemeral: true,
+      });
     } catch (e) {
       await interaction.followUp({
         content: "Couldn't add compliment\n" + e,
@@ -128,10 +148,12 @@ function addListeners() {
 
 function getComplimentMessage(
   member: GuildMember,
+  role: string,
   complimented: GuildMember,
-  compliment: string
+  complimentedRole: string,
+  compliment?: string
 ) {
-  let message = `${member.toString()} did a session with ${complimented.toString()}`;
+  let message = `${member.toString()} (${role.charAt(0).toUpperCase()}${role.slice(1)}) did a session with ${complimented.toString()} (${complimentedRole.charAt(0).toUpperCase()}${complimentedRole.slice(1)})`;
   if (compliment) {
     message += `\n\n>>> ${compliment}`;
   }
@@ -152,6 +174,16 @@ function getModal(id: string) {
     userInput
   );
 
+  const roleInput = new TextInputBuilder()
+    .setLabel("Override your role?")
+    .setCustomId("role")
+    .setPlaceholder("Hypnotist, Switch, Subject")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
+  const role = new ActionRowBuilder<TextInputBuilder>().addComponents(
+    roleInput
+  );
+
   const complimentInput = new TextInputBuilder()
     .setLabel("Compliment")
     .setCustomId("compliment")
@@ -162,7 +194,7 @@ function getModal(id: string) {
     complimentInput
   );
 
-  modal.addComponents(user, compliment);
+  modal.addComponents(user, role, compliment);
 
   return modal;
 }
