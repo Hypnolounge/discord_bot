@@ -1,3 +1,5 @@
+import Announcements from "@components/announcements";
+import AutoDeletes from "@components/autodeletes";
 import DidSession from "@components/didSession";
 import InfoCenter from "@components/infoCenter";
 import SelfRoles from "@components/self_roles";
@@ -11,7 +13,7 @@ import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
 
-// Load environment variables from .env file
+// Load environment variables from .env file‚
 dotenv();
 
 // Create a new Discord client
@@ -32,7 +34,7 @@ const bot = new Client({
 export default bot;
 
 // Event triggered when the bot is ready
-bot.on("ready", () => {
+bot.on("ready", async () => {
   console.log(`Logged in as ${bot.user?.tag}!`);
 
   // Set the bot's activity
@@ -47,8 +49,8 @@ bot.on("ready", () => {
   TicketLogger.init();
 
   SelfRoles();
-  //AutoDeletes();
-  //Announcements();
+  AutoDeletes();
+  Announcements();
   Tickets();
   Strikes();
   DidSession();
