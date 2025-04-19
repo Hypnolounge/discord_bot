@@ -1,7 +1,9 @@
 import { TicketAnswer, TicketCreator } from "@class/tickets/ticket";
 import config from "@db/config";
-import prisma from "@db/index";
-import { Prisma } from "@prisma/client";
+import db from "@db/index";
+import strikes from "@db/schema/strikes";
+import { ticketsIssue } from "@db/schema/tickets";
+import { getMemberStrikes } from "@db/user";
 import { log_error } from "@utils/error";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import getChannel from "@utils/getChannel";
@@ -17,6 +19,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
+import { and, count, eq } from "drizzle-orm";
 
 interface ModalData {
   id: string;
@@ -63,10 +66,10 @@ const actions: { [key: string]: ModalData[] } = {
   ],
 };
 
-const StrikeTicket = new TicketCreator<Prisma.tickets_issueDelegate>(
+const StrikeTicket = new TicketCreator(
   "strike",
   config.categories.issues,
-  prisma.tickets_issue,
+  ticketsIssue,
   undefined,
   {
     applied: {
@@ -76,16 +79,12 @@ const StrikeTicket = new TicketCreator<Prisma.tickets_issueDelegate>(
       message: "The strike has been applied.",
       closeAction: async (member, message) => {
         try {
-          await prisma.strikes.create({
-            data: {
-              userID: parseFloat(member.id),
-              reason: message,
-            },
-          });
+          await db.insert(strikes).values({
+            userID: member.id,
+            reason: message
+          })
 
-          const strikeCount = await prisma.strikes.count({
-            where: { userID: parseFloat(member.id) },
-          });
+          const strikeCount = (await db.select({value: count()}).from(strikes).where(eq(strikes.userID, member.id)))[0].value
 
           if (strikeCount === 3) {
             await member.send(
@@ -207,11 +206,9 @@ async function viewStrike(
     await interaction.deferReply();
     const user = await getMember(data.user);
 
-    const strikes = await prisma.strikes.findMany({
-      where: { userID: parseFloat(user.id) },
-    });
+    const strikesdata = await getMemberStrikes(user.id)
 
-    if (strikes.length === 0) {
+    if (strikesdata.length === 0) {
       return await interaction.followUp({
         content: "No strikes found",
         ephemeral: true,
@@ -223,7 +220,7 @@ async function viewStrike(
       .setColor("Blurple")
       .setFooter({ text: "PupNicky" });
 
-    strikes.forEach((strike) => {
+    strikesdata.forEach((strike) => {
       embed.addFields({
         name: `ID: ${strike.id}`,
         value: `Reason: ${strike.reason}`,
@@ -248,9 +245,7 @@ async function deleteStrike(
     await interaction.deferReply();
 
     const user = await getMember(data.user);
-    const strike = await prisma.strikes.delete({
-      where: { id: parseInt(data.strike_id), userID: parseFloat(user.id) },
-    });
+    const strike = (await db.delete(strikes).where(and(eq(strikes.id, parseInt(data.strike_id)), eq(strikes.userID, user.id))).returning())[0]
 
     await interaction.followUp(
       `Strike with ID ${strike.id} deleted for ${user.displayName}`
