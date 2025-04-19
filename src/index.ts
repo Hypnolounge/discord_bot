@@ -12,9 +12,20 @@ import { initializeMessageReactionRemove } from "@utils/events/messageReactionRe
 import Logger, { TicketLogger } from "@utils/Logger";
 import { ActivityType, Client } from "discord.js";
 import { config as dotenv } from "dotenv";
+import db from "./db";
+import { sql } from "drizzle-orm";
 
 // Load environment variables from .env file‚
 dotenv();
+
+try{
+  await db.execute(sql`select 1`);
+} catch(e){
+  console.error("Error connecting to database:", e);
+  console.log("Check your database connection settings and try again.")
+  process.exit(1)
+}
+
 
 // Create a new Discord client
 const bot = new Client({
