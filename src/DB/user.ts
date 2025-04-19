@@ -70,7 +70,7 @@ export async function getPrevApplications(memberID: string) {
         count: sql<number>`cast(count(${ticketsApplication.reason}) as int)`,
       })
       .from(ticketsApplication)
-      .where(eq(ticketsApplication.userID, memberID))
+      .where(eq(ticketsApplication.userId, memberID))
       .groupBy(ticketsApplication.reason);
 
     let content = "";

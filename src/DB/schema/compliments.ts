@@ -11,3 +11,5 @@ export const compliments = pgTable("compliments",
 );
 
 export default compliments;
+
+const infered = compliments["$inferInsert"]

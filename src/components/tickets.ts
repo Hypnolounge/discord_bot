@@ -14,6 +14,11 @@ import {
   TextInputStyle,
 } from "discord.js";
 import prisma from "@db/index";
+import {
+  ticketsApplication,
+  ticketsIssue,
+  ticketsMisc,
+} from "@db/schema/tickets";
 
 const ticketAutoMessage = [
   "Welcome to the Hypnolounge! We're sure you're excited to enter and do all the horny things you'd like to do, but before anything, please answer these questions.",
@@ -128,10 +133,10 @@ function ApplicationTicket() {
         TextInputStyle.Short
       ),
     ],
-    new TicketCreator<Prisma.tickets_applicationDelegate>(
+    new TicketCreator(
       "application",
       config.categories.applications,
-      prisma.tickets_application,
+      ticketsApplication,
       ticketAutoMessage,
       closeOptions
     )
@@ -148,11 +153,7 @@ function IssueTicket() {
       new TicketQuestion("Events", true, TextInputStyle.Paragraph),
       new TicketQuestion("People Involved", false, TextInputStyle.Paragraph),
     ],
-    new TicketCreator<Prisma.tickets_issueDelegate>(
-      "issue",
-      config.categories.issues,
-      prisma.tickets_issue
-    )
+    new TicketCreator("issue", config.categories.issues, ticketsIssue)
   );
 }
 
@@ -162,10 +163,6 @@ function MiscTicket() {
     "Misc",
     "Anything else. (including invites)",
     [],
-    new TicketCreator<Prisma.tickets_miscDelegate>(
-      "misc",
-      config.categories.misc,
-      prisma.tickets_misc
-    )
+    new TicketCreator("misc", config.categories.misc, ticketsMisc)
   );
 }

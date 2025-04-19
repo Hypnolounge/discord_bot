@@ -1,11 +1,11 @@
 import config from "@db/config";
-import { getPrevApplications } from "@db/user";
+import db from "@db/index";
 import {
-  Prisma,
-  tickets_application,
-  tickets_issue,
-  tickets_misc,
-} from "@prisma/client";
+  ticketsApplication,
+  ticketsIssue,
+  ticketsMisc,
+} from "@db/schema/tickets";
+import { getPrevApplications } from "@db/user";
 import { TextChannelGroup } from "@typings/TextChannelGroup";
 import { bindInteractionCreated } from "@utils/events/interactionCreated";
 import getMember from "@utils/getMember";
@@ -28,6 +28,7 @@ import {
   TextInputStyle,
   User,
 } from "discord.js";
+import { eq, InferInsertModel } from "drizzle-orm";
 
 export interface TicketAnswer {
   question: string;
@@ -52,22 +53,17 @@ const defaultButtons = {
   },
 };
 
-export class TicketCreator<
-  T extends
-    | Prisma.tickets_applicationDelegate
-    | Prisma.tickets_issueDelegate
-    | Prisma.tickets_miscDelegate
-> {
+export class TicketCreator {
   type: string;
   categoryID: string;
-  table: T;
+  table: typeof ticketsApplication | typeof ticketsMisc | typeof ticketsIssue;
   autoMessage: string[];
   closeOptions: CloseOptions;
 
   constructor(
     type: string,
     categoryID: string,
-    table: T,
+    table: typeof ticketsApplication | typeof ticketsMisc | typeof ticketsIssue,
     autoMessage: string[] = [],
     closeOptions: CloseOptions = defaultButtons
   ) {
@@ -185,7 +181,7 @@ export class TicketCreator<
 
       const ticket = await this.closeDBTicket(ticketID, reason);
 
-      const member = await getMember(ticket.userID.toString());
+      const member = await getMember(ticket.userId);
 
       const memberPing = member
         ? `${member.toString()} (${member.displayName})`
@@ -224,17 +220,16 @@ export class TicketCreator<
   }
 
   protected async closeDBTicket(ticketID: number, reason: string) {
-    const result: tickets_application | tickets_issue | tickets_misc = await (
-      this.table as any
-    ).update({
-      where: {
-        id: ticketID,
-      },
-      data: {
-        closed: new Date().getTime(),
-        reason: reason,
-      },
-    });
+    const result = (
+      await db
+        .update(this.table)
+        .set({
+          reason,
+          closed: new Date(),
+        })
+        .where(eq(this.table.id, ticketID))
+        .returning()
+    )[0];
 
     return result;
   }
@@ -310,15 +305,9 @@ export class TicketCreator<
 
   protected async insertDBTicket(userID: string) {
     try {
-      const ticket = await this.table.create({
-        data: {
-          userID: parseInt(userID),
-          opened: new Date().getTime(),
-          channel: 0,
-          reason: "",
-          closed: 0,
-        },
-      });
+      const ticket = (await db.insert(this.table).values({
+        userId: userID,
+      }).returning())[0]
 
       return { ticket };
     } catch (error) {
@@ -371,16 +360,8 @@ export class TicketCreator<
 
   protected async updateDBTicket(ticketID: number, channelID: string) {
     try {
-      const result: tickets_application | tickets_issue | tickets_misc = await (
-        this.table as any
-      ).update({
-        where: {
-          id: ticketID,
-        },
-        data: {
-          channel: parseInt(channelID),
-        },
-      });
+      const result = (await db.update(this.table).set({channel: channelID}).where(eq(this.table.id, ticketID)).returning())[0];
+      console.log(result);
       return { result };
     } catch (error) {
       return { result: null, error };
@@ -426,7 +407,8 @@ export class TicketCreator<
   }
 
   protected async getAnswers(answers: TicketAnswer[], memberID: string) {
-    const title = this.type.charAt(0).toUpperCase() + this.type.slice(1) + " Ticket";
+    const title =
+      this.type.charAt(0).toUpperCase() + this.type.slice(1) + " Ticket";
     const embed = new EmbedBuilder()
       .setTitle(title)
       .setColor("Blurple")
@@ -453,7 +435,9 @@ export class TicketCreator<
 
     Object.keys(this.closeOptions).forEach((key) => {
       const id = `closeTicket:${this.type}_${ticketID}_${key}`;
-      const button = ButtonBuilder.from(this.closeOptions[key].button.toJSON()).setCustomId(id);
+      const button = ButtonBuilder.from(
+        this.closeOptions[key].button.toJSON()
+      ).setCustomId(id);
       row.addComponents(button);
     });
 

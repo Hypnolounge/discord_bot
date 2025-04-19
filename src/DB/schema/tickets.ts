@@ -3,13 +3,13 @@ import { users } from "./users";
 
 const ticketTemplate = {
   id: serial("id").primaryKey(),
-  userID: varchar("userID")
+  userId: varchar("userID")
     .references(() => users.userId)
     .notNull(),
-  channel: varchar("channel").notNull(),
+  channel: varchar("channel"),
   opened: timestamp("opened").notNull().defaultNow(),
-  closed: timestamp("closed").notNull(),
-  reason: varchar("reason", { length: 20 }).notNull(),
+  closed: timestamp("closed"),
+  reason: varchar("reason", { length: 20 }),
 };
 
 export const ticketsApplication = pgTable(

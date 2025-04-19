@@ -16,22 +16,14 @@ export default class TicketOpener {
   description: string;
   questions: TicketQuestion[];
   modal: ModalBuilder;
-  ticketCreator: TicketCreator<
-    | Prisma.tickets_applicationDelegate
-    | Prisma.tickets_issueDelegate
-    | Prisma.tickets_miscDelegate
-  >;
+  ticketCreator: TicketCreator;
 
   constructor(
     name: string,
     title: string,
     description: string,
     questions: TicketQuestion[],
-    ticketCreator: TicketCreator<
-      | Prisma.tickets_applicationDelegate
-      | Prisma.tickets_issueDelegate
-      | Prisma.tickets_miscDelegate
-    >
+    ticketCreator: TicketCreator
   ) {
     this.name = name;
     this.title = title;
