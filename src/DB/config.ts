@@ -2,6 +2,7 @@ import { configDotenv } from "dotenv";
 
 const config = {
   prefix: "?",
+  guild_id: "",
   channels: {
     intros: "1125014789450641458",
     tickets: "1125813015485370538",
@@ -152,6 +153,7 @@ const config = {
 
 const configDev = {
   prefix: "??",
+  guild_id: "1311679215279804506",
   channels: {
     intros: "1311679215829127182",
     tickets: "1311679215829127179",
@@ -320,7 +322,7 @@ const configNames = {
     system_log: "system-log",
     ticket_log: "ticket-log",
     info_centre: "info-centre",
-  } as Record<string, string>,
+  },
   roles: {
     mod: "mod",
     member: "member",

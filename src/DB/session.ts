@@ -1,32 +1,24 @@
 import { GuildMember } from "discord.js";
-import prisma from ".";
+import db from ".";
 import config from "./config";
+import compliments from "./schema/compliments";
+import sessions from "./schema/sessions";
 
 export async function addCompliment(
   userID: string,
   other: string,
   comment: string = ""
 ) {
-  await prisma.compliments.create({
-    data: {
-      give: userID,
-      receive: other,
-      comment: comment,
-    },
+  return await db.insert(compliments).values({
+    give: userID,
+    receive: other,
+    comment: comment,
   });
 }
 
-export async function addSession(
-  userID: string,
-  type: string,
-) {
-  await prisma.sessions.create(
-    {
-      data: {
-        userID: userID,
-        medium: type,
-        date: ((new Date().getTime()) / 1000)
-      }
-    }
-  )
+export async function addSession(userID: string, type: string) {
+  return await db.insert(sessions).values({
+    userId: userID,
+    medium: type,
+  })
 }

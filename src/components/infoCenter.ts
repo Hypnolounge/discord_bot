@@ -248,38 +248,6 @@ async function getComplimentsPage(
         `${header} ${otherMember.toString()}\n\n>>> ${comment}`
       );
     }
-
-    /* // Calculate pagination details
-    const totalPages = Math.ceil(compliments.length / complimentsPerPage);
-    lastPage = page === totalPages;
-    const startIndex = (page-1) * complimentsPerPage;
-    const endIndex = startIndex + complimentsPerPage;
-
-    // Get the current slice of compliments
-    const currentPageCompliments = compliments.slice(startIndex, endIndex);
-
-    // Process and add compliments to the embed
-    for (const compliment of currentPageCompliments) {
-      const isReceived = compliment.receive === user.id;
-      const otherUserId = isReceived ? compliment.give : compliment.receive;
-      const header = isReceived ? "Received from" : "Given to";
-      const comment = compliment.comment || "_No comment from user_";
-      try {
-        const otherMember = await getMember(otherUserId);
-
-        embed.addFields({
-          name: comment,
-          value: `${header} ${otherMember.toString()}`,
-          inline: false,
-        });
-      } catch (error) {
-        embed.addFields({
-          name: `${header} Unknown`,
-          value: comment,
-          inline: false,
-        });
-      }
-    } */
   } catch (e) {
     log_error(e);
     embed.addFields({
@@ -369,8 +337,8 @@ async function getSessionsPage(user: GuildMember, personal: string): Promise<Mes
   try {
     const userSessions = await getMemberSessions(user.id);
     userSessions.forEach((row) => {
-      sessions[row.medium] = row._count._all;
-      sessions.total += row._count._all;
+      sessions[row.medium] = row.count;
+      sessions.total += row.count;
     });
   } catch (e) {
     log_error(e);

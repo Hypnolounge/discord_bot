@@ -1,4 +1,5 @@
 import bot from "@bot";
+import config from "@db/config";
 import {
   ButtonInteraction,
   CommandInteraction,
@@ -25,7 +26,7 @@ const actions = {
 
 export function initializeInteractionCreated() {
   bot.on("interactionCreate", async (interaction) => {
-    if (interaction.guildId !== process.env.GUILD_ID) return;
+    if (interaction.guildId !== config.guild_id) return;
     if (interaction.user.bot) return;
 
     if (interaction.isCommand()) {

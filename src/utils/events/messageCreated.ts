@@ -1,3 +1,4 @@
+import config from "@db/config";
 import { Message } from "discord.js";
 import bot from "src";
 
@@ -9,7 +10,7 @@ const register: { [key: string]: Callback } = {};
 
 export function initializeMessageCreated() {
   bot.on("messageCreate", async (message: Message) => {
-    if (message.guildId !== process.env.GUILD_ID) return;
+    if (message.guildId !== config.guild_id) return;
     if (message.author.bot) return;
     if (message.channel.isThread()) return;
 

@@ -1,8 +1,12 @@
 import db from "./index";
+import keyValue from "./schema/keyValue";
+import { eq } from "drizzle-orm";
 
 export async function getKeyValue(lookupKey: string, type: string = "default") {
   const query = `${lookupKey}_${type}`;
-  const data = await db.key_value.findFirst({ where: { key: query } });
+  const data = (
+    await db.select().from(keyValue).where(eq(keyValue.key, query))
+  )[0];
   return data?.value || "";
 }
 
@@ -13,12 +17,18 @@ export async function setKeyValue(
 ) {
   const query = `${lookupKey}_${type}`;
   try {
-    await db.key_value.upsert({
-      where: { key: query },
-      update: { value: value },
-      create: { key: query, value: value },
-    });
-    return true;
+    return await db
+      .insert(keyValue)
+      .values({
+        key: query,
+        value: value,
+      })
+      .onConflictDoUpdate({
+        target: keyValue.key,
+        set: {
+          value: value,
+        },
+      });
   } catch (e) {
     console.error(e);
     throw new Error(`Error setting key value pair for ${query}`);

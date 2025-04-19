@@ -2,72 +2,81 @@ import findIntro from "@utils/findIntro";
 import getChannel from "@utils/getChannel";
 import getMember from "@utils/getMember";
 import getMessage from "@utils/getMessage";
-import { getMemberContinent, getMemberPrimary, isUserMember } from "@utils/member";
+import {
+  getMemberContinent,
+  getMemberPrimary,
+  isUserMember,
+} from "@utils/member";
 import { GuildMember, Message } from "discord.js";
-import prisma from ".";
+import db from ".";
 import config from "./config";
+import users from "./schema/users";
+import intros from "./schema/intros";
+import strikes from "./schema/strikes";
+import { eq, or, sql } from "drizzle-orm";
+import compliments from "./schema/compliments";
+import sessions from "./schema/sessions";
+import { ticketsApplication } from "./schema/tickets";
 
 export async function updateUser(member: GuildMember) {
   const id = member.id;
   const primaryRole = getMemberPrimary(member) || "Unknown";
 
   const continentRole = getMemberContinent(member) || "Unknown";
-
-  return await prisma.users.upsert({
-    where: {
-      userID: id,
-    },
-    update: {
-      displayname: member.user.displayName,
-      continent: continentRole,
-      primary: primaryRole,
-    },
-    create: {
-      userID: id,
+  return await db
+    .insert(users)
+    .values({
+      userId: id,
       displayname: member.user.displayName,
       continent: continentRole,
       primary: primaryRole,
       name: member.user.username,
-    },
-  });
+    })
+    .onConflictDoUpdate({
+      target: users.userId,
+      set: {
+        userId: id,
+        displayname: member.user.displayName,
+        continent: continentRole,
+        primary: primaryRole,
+        name: member.user.username,
+      },
+    });
 }
 
 export async function setIntro(memberID: string, message: Message) {
-  return await prisma.intros.upsert({
-    where: {
-      userID: memberID,
-    },
-    update: {
-      message: message.id,
-      text: message.content,
-    },
-    create: {
+  return await db
+    .insert(intros)
+    .values({
       userID: memberID,
       message: message.id,
       text: message.content,
-    },
-  });
+    })
+    .onConflictDoUpdate({
+      target: intros.userID,
+      set: {
+        userID: memberID,
+        message: message.id,
+        text: message.content,
+      },
+    });
 }
 
 export async function getPrevApplications(memberID: string) {
   try {
-    const result = await prisma.tickets_application.groupBy({
-      by: ["reason"],
-      where: {
-        userID: memberID,
-        reason: {
-          not: "",
-        },
-      },
-      _count: {
-        _all: true,
-      },
-    });
+    const result = await db
+      .select({
+        reason: ticketsApplication.reason,
+        count: sql<number>`cast(count(${ticketsApplication.reason}) as int)`,
+      })
+      .from(ticketsApplication)
+      .where(eq(ticketsApplication.userID, memberID))
+      .groupBy(ticketsApplication.reason);
 
     let content = "";
     result?.forEach((row) => {
       console.log(row);
-      content += `${row.reason}: ${row._count._all} `;
+      content += `${row.reason}: ${row.count} `;
     });
 
     return content;
@@ -81,11 +90,9 @@ export async function getPrevApplications(memberID: string) {
 
 export async function getPrimaryRole(memberID: string) {
   try {
-    const result = await prisma.users.findUnique({
-      where: {
-        userID: memberID,
-      },
-    });
+    const result = (
+      await db.select().from(users).where(eq(users.userId, memberID))
+    )[0];
 
     if (result && result.primary !== "Unknown") return result.primary;
 
@@ -105,50 +112,45 @@ export async function getPrimaryRole(memberID: string) {
 }
 
 export async function getMemberSessions(memberID: string) {
-  return await prisma.sessions.groupBy({
-    by: ["medium"],
-    where: {
-      userID: memberID,
-    },
-    _count: {
-      _all: true,
-    },
-  });
+  return await db
+    .select({
+      medium: sessions.medium,
+      count: sql<number>`cast(count(${users.userId}) as int)`,
+    })
+    .from(sessions)
+    .where(eq(sessions.userId, memberID))
+    .groupBy(sessions.medium);
 }
 
 export async function getMemberInfo(memberID: string) {
-  let member = await prisma.users.findUnique({
-    where: {
-      userID: memberID,
-    },
-  });
+  let member = (
+    await db.select().from(users).where(eq(users.userId, memberID))
+  )[0];
+
   if (!member) {
     await updateUser(await getMember(memberID));
-    member = await prisma.users.findUnique({
-      where: {
-        userID: memberID,
-      },
-    });
+    member = (
+      await db.select().from(users).where(eq(users.userId, memberID))
+    )[0];
   }
 
-  const intro = await prisma.intros.findFirst({
-    where: {
-      userID: memberID,
-    },
-  });
+  const intro = (
+    await db.select().from(intros).where(eq(intros.userID, memberID))
+  )[0];
 
   let url = "Unknown";
   try {
-    const message = await getMessage(intro?.message.toString() || "", await getChannel(config.channels.intros));
+    const message = await getMessage(
+      intro?.message.toString() || "",
+      await getChannel(config.channels.intros)
+    );
     url = message.url;
-  } catch (error) {
-
-  }
+  } catch (error) {}
 
   if (url === "Unknown") {
-    try{
+    try {
       const msg = await findIntro(memberID);
-      if(msg) {
+      if (msg) {
         url = msg.url;
         setIntro(memberID, msg);
       }
@@ -156,31 +158,21 @@ export async function getMemberInfo(memberID: string) {
       console.error(error);
     }
   }
-  
+
   const isMember = await isUserMember(memberID);
 
-  return {member, url, isMember};
+  return { member, url, isMember };
 }
 
 export async function getMemberStrikes(memberID: string) {
-  return await prisma.strikes.findMany({
-    where: {
-      userID: memberID,
-    },
-  });
+  return await db.select().from(strikes).where(eq(strikes.userID, memberID));
 }
 
 export async function getMemberCompliments(memberID: string) {
-  return await prisma.compliments.findMany({
-    where: {
-      OR: [
-        {
-          give: memberID,
-        },
-        {
-          receive: memberID,
-        },
-      ],
-    },
-  });
+  return await db
+    .select()
+    .from(compliments)
+    .where(
+      or(eq(compliments.give, memberID), eq(compliments.receive, memberID))
+    );
 }
