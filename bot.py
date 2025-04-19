@@ -39,6 +39,7 @@ announce_channel_id = 1125854117408026655
 info_channel_id = 1158521239174918195
 strike_channel_id = 1125847005609082900
 ticket_channel_id = 1125813015485370538
+unverified_ticket_channel_id = 1363020076550328370
 system_log_channel_id = 1125070879525715978
 lf_tist_channel_id = 1125024527932456960
 lf_sub_channel_id = 1125080015210557492
@@ -236,6 +237,9 @@ async def on_ready():
     # AutoMessage in ticket channel
     time.sleep(0.2)
     await check_ticket_message()
+    # AutoMessage in unverified ticket channel
+    time.sleep(0.2)
+    await check_unverified_ticket_message()
     # Check the tickets and its messages
     time.sleep(0.2)
     await check_tickets()
@@ -929,6 +933,34 @@ async def check_ticket_message():
         ticket_message = await ticket_channel.send(embed=ticket_embed, view=ticket_view)
         write_message_id("ticket_message", ticket_message.id)
 
+
+async def check_unverified_ticket_message():
+    ticket_message_id = read_message_id("ticket_message")
+    ticket_channel = bot.get_channel(unverified_ticket_channel_id)
+    ticket_view = TicketView(timeout=None)
+
+    ticket_embed = discord.Embed(
+        title="Tickets",
+        description="Choose one of the options below:\nApplication: You would like to become a member of the Hypnolounge.\nIssue: You would like to report an issue in general ranging from bugs, to server issues, to serious incidents.\nInvite: You would like to invite someone to the Hypnolounge.\nMisc: Anything else.",
+        color=discord.Color.blurple(),
+    )
+
+    ticket_embed.set_footer(text="PupNicky")
+
+    rebuild = False
+    if ticket_message_id:
+        try:
+            last_message = await ticket_channel.fetch_message(ticket_message_id)
+            await last_message.edit(embed=ticket_embed, view=ticket_view)
+            time.sleep(2)
+        except discord.NotFound:
+            rebuild = True
+    else:
+        rebuild = True
+
+    if rebuild:
+        ticket_message = await ticket_channel.send(embed=ticket_embed, view=ticket_view)
+        write_message_id("ticket_message", ticket_message.id)
 
 async def check_tickets():
     tickets = db.get_open_tickets()
