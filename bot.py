@@ -935,23 +935,23 @@ async def check_ticket_message():
 
 
 async def check_unverified_ticket_message():
-    ticket_message_id = read_message_id("ticket_message")
-    ticket_channel = bot.get_channel(unverified_ticket_channel_id)
-    ticket_view = TicketView(timeout=None)
+    unverified_ticket_message_id = read_message_id("unverified_ticket_message")
+    unverified_ticket_channel = bot.get_channel(unverified_ticket_channel_id)
+    unverified_ticket_view = TicketView(timeout=None)
 
-    ticket_embed = discord.Embed(
+   unverified_ticket_embed = discord.Embed(
         title="Tickets",
         description="Choose one of the options below:\nApplication: You would like to become a member of the Hypnolounge.\nIssue: You would like to report an issue in general ranging from bugs, to server issues, to serious incidents.\nInvite: You would like to invite someone to the Hypnolounge.\nMisc: Anything else.",
         color=discord.Color.blurple(),
     )
 
-    ticket_embed.set_footer(text="PupNicky")
+    unverified_ticket_embed.set_footer(text="PupNicky")
 
     rebuild = False
-    if ticket_message_id:
+    if unverified_ticket_message_id:
         try:
-            last_message = await ticket_channel.fetch_message(ticket_message_id)
-            await last_message.edit(embed=ticket_embed, view=ticket_view)
+            last_message = await unverified_ticket_channel.fetch_message(unverified_ticket_message_id)
+            await last_message.edit(embed=ticket_embed, view=unverified_ticket_view)
             time.sleep(2)
         except discord.NotFound:
             rebuild = True
@@ -959,8 +959,8 @@ async def check_unverified_ticket_message():
         rebuild = True
 
     if rebuild:
-        ticket_message = await ticket_channel.send(embed=ticket_embed, view=ticket_view)
-        write_message_id("ticket_message", ticket_message.id)
+        unverified_ticket_message = await ticket_channel.send(embed=ticket_embed, view=unverified_ticket_view)
+        write_message_id("unverified_ticket_message", unverified_ticket_message.id)
 
 async def check_tickets():
     tickets = db.get_open_tickets()
