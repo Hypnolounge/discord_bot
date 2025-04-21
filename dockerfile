@@ -26,4 +26,4 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 # Run the application
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["node", "dist/index.js"]
