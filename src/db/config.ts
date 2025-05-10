@@ -2,7 +2,7 @@ import { configDotenv } from "dotenv";
 
 const config = {
   prefix: "?",
-  guild_id: "",
+  guild_id: "1125008815272759408",
   channels: {
     intros: "1125014789450641458",
     tickets: "1125813015485370538",

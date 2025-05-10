@@ -7,7 +7,12 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db-prod:migrate": "drizzle-kit migrate --config=drizzle-prod.config.ts",
+    "db-prod:push": "drizzle-kit push --config=drizzle-prod.config.ts"
   },
   "keywords": [],
   "author": "",

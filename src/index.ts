@@ -20,6 +20,7 @@ dotenv();
 
 try{
   await db.execute(sql`select 1`);
+  
 } catch(e){
   console.error("Error connecting to database:", e);
   console.log("Check your database connection settings and try again.")

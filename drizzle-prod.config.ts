@@ -6,7 +6,7 @@ export default defineConfig({
   schema: './src/db/schema',
   dialect: 'postgresql',
   dbCredentials: {
-    url:`${process.env.DATABASE_URL!}_dev`,
+    url: process.env.DATABASE_URL!,
   },
   strict: true,
   verbose: true,
