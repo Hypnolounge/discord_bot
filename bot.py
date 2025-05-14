@@ -17,7 +17,11 @@ args = sys.argv
 test = string_to_bool[args[1]] """
 dotenv.load_dotenv()
 token = str(os.getenv("TOKEN"))
-test = os.getenv("TEST", 0)
+test = os.getenv("TEST", False)
+if test:
+    sys.stdout.write("Running in test mode\n")
+else:
+    sys.stdout.write("Running in production mode\n")
 
 # guilds
 hypnolounge_guild_id = 1125008815272759408

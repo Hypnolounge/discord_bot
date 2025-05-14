@@ -1,0 +1,9 @@
+# ignore the last message id file
+logs/*
+*.json
+.env
+__pycache__
+.vscode
+node_modules
+.venv
+dockerfile
