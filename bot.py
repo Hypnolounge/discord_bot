@@ -939,11 +939,11 @@ async def check_unverified_ticket_message():
     unverified_ticket_channel = bot.get_channel(unverified_ticket_channel_id)
     unverified_ticket_view = TicketView(timeout=None)
 
-   unverified_ticket_embed = discord.Embed(
-        title="Tickets",
-        description="Choose one of the options below:\nApplication: You would like to become a member of the Hypnolounge.\nIssue: You would like to report an issue in general ranging from bugs, to server issues, to serious incidents.\nInvite: You would like to invite someone to the Hypnolounge.\nMisc: Anything else.",
-        color=discord.Color.blurple(),
-    )
+    unverified_ticket_embed = discord.Embed(
+            title="Tickets",
+            description="Choose one of the options below:\nApplication: You would like to become a member of the Hypnolounge.\nIssue: You would like to report an issue in general ranging from bugs, to server issues, to serious incidents.\nInvite: You would like to invite someone to the Hypnolounge.\nMisc: Anything else.",
+            color=discord.Color.blurple(),
+        )
 
     unverified_ticket_embed.set_footer(text="PupNicky")
 

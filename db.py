@@ -4,7 +4,7 @@ import datetime
 import os
 
 config = {
-    "host": "db",
+    "host": os.getenv("DB_HOST") or "localhost",
     "user": "root",
     "password": os.getenv("DB_PW"),
     "database": "hypnolounge",

@@ -3,7 +3,6 @@ logs/*
 *.json
 .env
 __pycache__
-docker*
-.dockerignore
 .vscode
 node_modules
+.venv
