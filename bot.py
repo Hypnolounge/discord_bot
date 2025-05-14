@@ -239,7 +239,7 @@ async def on_ready():
     await check_ticket_message()
     # AutoMessage in unverified ticket channel
     time.sleep(0.2)
-    await check_unverified_ticket_message()
+    # await check_unverified_ticket_message()
     # Check the tickets and its messages
     time.sleep(0.2)
     await check_tickets()
@@ -938,6 +938,7 @@ async def check_unverified_ticket_message():
     unverified_ticket_message_id = read_message_id("unverified_ticket_message")
     unverified_ticket_channel = bot.get_channel(unverified_ticket_channel_id)
     unverified_ticket_view = TicketView(timeout=None)
+    ticket_channel = bot.get_channel(ticket_channel_id)
 
     unverified_ticket_embed = discord.Embed(
             title="Tickets",
@@ -951,7 +952,7 @@ async def check_unverified_ticket_message():
     if unverified_ticket_message_id:
         try:
             last_message = await unverified_ticket_channel.fetch_message(unverified_ticket_message_id)
-            await last_message.edit(embed=ticket_embed, view=unverified_ticket_view)
+            await last_message.edit(embed=unverified_ticket_embed, view=unverified_ticket_view)
             time.sleep(2)
         except discord.NotFound:
             rebuild = True
@@ -959,7 +960,7 @@ async def check_unverified_ticket_message():
         rebuild = True
 
     if rebuild:
-        unverified_ticket_message = await ticket_channel.send(embed=ticket_embed, view=unverified_ticket_view)
+        unverified_ticket_message = await ticket_channel.send(embed=unverified_ticket_embed, view=unverified_ticket_view)
         write_message_id("unverified_ticket_message", unverified_ticket_message.id)
 
 async def check_tickets():
